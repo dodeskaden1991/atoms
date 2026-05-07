@@ -1,0 +1,12 @@
+{
+  "appId": "bg.atmos.chat",
+  "appName": "Atmos",
+  "webDir": "",
+  "server": {
+    "url": "https://atoms.free.bg",
+    "cleartext": true
+  },
+  "android": {
+    "path": "../android"
+  }
+}
