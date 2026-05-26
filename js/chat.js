@@ -1,7 +1,3 @@
-<<<<<<< HEAD
-
-=======
->>>>>>> 3c7b51dcdb7aaf2300500fbcce31ea2d68faa6ef
 /* ===========================
    FIREBASE CONFIG
 =========================== */
@@ -18,7 +14,6 @@ const firebaseConfig = {
 };
 
 firebase.initializeApp(firebaseConfig);
-<<<<<<< HEAD
 window.db = firebase.database();
 
 /* ===========================
@@ -46,9 +41,6 @@ function getJoinedRooms() {
     return [];
   }
 }
-=======
-const db = firebase.database();
->>>>>>> 3c7b51dcdb7aaf2300500fbcce31ea2d68faa6ef
 
 /* ===========================
    EMOTICON CONVERTER
@@ -56,37 +48,15 @@ const db = firebase.database();
 
 function convertEmotes(text) {
   const emotes = {
-<<<<<<< HEAD
     ";(": "&#128546;", ";-(": "&#128546;", ":(": "&#9785;&#65039;", ":-(": "&#9785;&#65039;",
     ":)": "&#128578;", ":-)": "&#128578;", ":D": "&#128513;", ":-D": "&#128513;",
     "<3": "&#10084;&#65039;", ":P": "&#128539;", ":-P": "&#128539;", ":O": "&#128558;",
     ":-O": "&#128558;", ";)": "&#128521;", ";-)": "&#128521;"
-=======
-    ";(": "😢",
-    ";-(": "😢",
-    ":(": "☹️",
-    ":-(": "☹️",
-    ":)": "🙂",
-    ":-)": "🙂",
-    ":D": "😁",
-    ":-D": "😁",
-    "<3": "❤️",
-    ":P": "😛",
-    ":-P": "😛",
-    ":O": "😮",
-    ":-O": "😮",
-    ";)": "😉",
-    ";-)": "😉"
->>>>>>> 3c7b51dcdb7aaf2300500fbcce31ea2d68faa6ef
   };
 
   for (const key in emotes) {
     text = text.replaceAll(key, emotes[key]);
   }
-<<<<<<< HEAD
-=======
-
->>>>>>> 3c7b51dcdb7aaf2300500fbcce31ea2d68faa6ef
   return text;
 }
 
@@ -100,7 +70,6 @@ function formatMessage(msg) {
     minute: "2-digit"
   });
 
-<<<<<<< HEAD
   let safeName = msg.name ? msg.name : "[SYSTEM]";
   safeName = safeName.replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
@@ -115,21 +84,12 @@ function formatMessage(msg) {
   }
 
   return `[${time}]${roomTag} &lt;${safeName}&gt; ${safeText}`;
-=======
-  const cleanText = convertEmotes(msg.text);
-
-  const safeName = msg.name.replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  const safeText = cleanText.replace(/</g, "&lt;").replace(/>/g, "&gt;");
-
-  return `[${time}] &lt;${safeName}&gt; ${safeText}`;
->>>>>>> 3c7b51dcdb7aaf2300500fbcce31ea2d68faa6ef
 }
 
 /* ===========================
    DISPLAY MESSAGE
 =========================== */
 
-<<<<<<< HEAD
 function appendMessage(text, isPrivate = false, isRoom = false) {
   const messages = document.getElementById("messages");
   let line = text;
@@ -141,17 +101,6 @@ function appendMessage(text, isPrivate = false, isRoom = false) {
   }
 
   messages.innerHTML += line + "<br>";
-=======
-function appendMessage(text, isPrivate = false) {
-  const messages = document.getElementById("messages");
-
-  if (isPrivate) {
-    messages.innerHTML += `<span class="privateMsg">${text}</span>\n`;
-  } else {
-    messages.innerHTML += text + "\n";
-  }
-
->>>>>>> 3c7b51dcdb7aaf2300500fbcce31ea2d68faa6ef
   messages.scrollTop = messages.scrollHeight;
 }
 
@@ -160,37 +109,22 @@ function appendMessage(text, isPrivate = false) {
 =========================== */
 
 function sendChatMessage(text) {
-<<<<<<< HEAD
   db.ref("atmos_chat").push({
-=======
-  const msg = {
->>>>>>> 3c7b51dcdb7aaf2300500fbcce31ea2d68faa6ef
     name: getNickname(),
     text: text,
     timestamp: Date.now(),
     room: "main"
-<<<<<<< HEAD
   });
 }
 
 function sendPrivateMessage(to, text) {
   db.ref("atmos_chat").push({
-=======
-  };
-
-  db.ref("atmos_chat").push(msg);
-}
-
-function sendPrivateMessage(to, text) {
-  const msg = {
->>>>>>> 3c7b51dcdb7aaf2300500fbcce31ea2d68faa6ef
     name: getNickname(),
     text: text,
     timestamp: Date.now(),
     room: "main",
     private: true,
     to: to
-<<<<<<< HEAD
   });
 }
 
@@ -244,61 +178,16 @@ function shouldDisplayMessage(msg) {
 
 /* ===========================
    SOUND / NOTIFICATIONS
-=======
-  };
-
-  db.ref("atmos_chat").push(msg);
-}
-
-/* ===========================
-   LISTEN FOR NEW MESSAGES
-=========================== */
-
-function listenForMessages() {
-  console.log("Listener started");
-
-  db.ref("atmos_chat")
-  .limitToLast(500)
-  .on("child_added", snapshot => {
-    const msg = snapshot.val();
-    if (!msg) return;
-
-    // PRIVATE FILTER
-    if (msg.private === true && msg.to !== getNickname()) {
-      return;
-    }
-
-    if (document.hidden && !notificationsMuted) {
-    notifyNewMessage();
-    playNotifySound();
-    navigator.vibrate(1000);
-}
-    appendMessage(formatMessage(msg), msg.private);
-  });
-}
-
-/* ===========================
-   NOTIFICATIONS
->>>>>>> 3c7b51dcdb7aaf2300500fbcce31ea2d68faa6ef
 =========================== */
 
 function playNotifySound() {
   const snd = document.getElementById("notifySound");
-<<<<<<< HEAD
   if (snd) {
     snd.currentTime = 0;
     snd.play().catch(() => {});
   }
 }
 
-=======
-  snd.currentTime = 0;
-  snd.play().catch(() => {});
-}
-
-let unread = 0;
-
->>>>>>> 3c7b51dcdb7aaf2300500fbcce31ea2d68faa6ef
 function notifyNewMessage() {
   unread++;
   document.title = `(${unread}) Atmos — дигитална свободна зона`;
@@ -310,7 +199,6 @@ window.addEventListener("focus", () => {
 });
 
 /* ===========================
-<<<<<<< HEAD
    LISTEN FOR NEW MESSAGES
 =========================== */
 
@@ -365,14 +253,11 @@ function reloadChatMessages() {
 }
 
 /* ===========================
-=======
->>>>>>> 3c7b51dcdb7aaf2300500fbcce31ea2d68faa6ef
    INIT
 =========================== */
 
 document.addEventListener("DOMContentLoaded", () => {
   listenForMessages();
-<<<<<<< HEAD
   listenForGlobalEffects();
 
   document.addEventListener("click", enableSoundOnce, { once: true });
@@ -383,16 +268,3 @@ document.addEventListener("DOMContentLoaded", () => {
     if (snd) snd.play().catch(() => {});
   }
 });
-
-=======
-  document.addEventListener("click", enableSoundOnce, { once: true });
-  document.addEventListener("keydown", enableSoundOnce, { once: true });
-  let notificationsMuted = false;
-
-  function enableSoundOnce() {
-    const snd = document.getElementById("notifySound");
-    snd.play().catch(() => {});
-  }
-
-});
->>>>>>> 3c7b51dcdb7aaf2300500fbcce31ea2d68faa6ef

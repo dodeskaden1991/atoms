@@ -1,12 +1,6 @@
-<<<<<<< HEAD
 /* ==========================================================
    NICKNAME SYSTEM
 ========================================================== */
-=======
-/* ===========================
-   NICKNAME SYSTEM
-=========================== */
->>>>>>> 3c7b51dcdb7aaf2300500fbcce31ea2d68faa6ef
 
 function generateRandomNick() {
   const random = Math.random().toString(36).substring(2, 7).toUpperCase();
@@ -29,35 +23,19 @@ function setNickname(newNick) {
   updatePrompt();
 }
 
-<<<<<<< HEAD
 /* ==========================================================
    TERMINAL PROMPT
 ========================================================== */
-=======
-/* ===========================
-   TERMINAL PROMPT
-=========================== */
->>>>>>> 3c7b51dcdb7aaf2300500fbcce31ea2d68faa6ef
 
 function updatePrompt() {
   const nick = getNickname();
   const prompt = document.getElementById("terminalPrompt");
-<<<<<<< HEAD
   if (prompt) prompt.textContent = `${nick}@atmos:~$ `;
 }
 
 /* ==========================================================
    THEME SYSTEM
 ========================================================== */
-=======
-
-  prompt.textContent = `${nick}@atmos:~$ `;
-}
-
-/* ===========================
-   THEME SYSTEM
-=========================== */
->>>>>>> 3c7b51dcdb7aaf2300500fbcce31ea2d68faa6ef
 
 function applySavedTheme() {
   const saved = localStorage.getItem("theme");
@@ -83,67 +61,37 @@ function setTheme(mode) {
   }
 }
 
-<<<<<<< HEAD
 /* ==========================================================
    MUSIC BACKEND (NO UI)
 ========================================================== */
 
 const stations = [
-=======
-/* ===========================
-   MUSIC BACKEND (NO UI)
-=========================== */
-
-const stations = [
-  // BG
->>>>>>> 3c7b51dcdb7aaf2300500fbcce31ea2d68faa6ef
   { name: "Radio Tangra (BG)", url: "https://restreamer.radiotangra.com/Tangra-high" },
   { name: "Power FM (BG)", url: "https://lounge.powerfm.bg:28001/live" },
   { name: "Energy (BG)", url: "http://play.global.audio:443/nrj.opus" },
   { name: "Radio 1 (BG)", url: "http://play.global.audio:8000/radio1.opus" },
-<<<<<<< HEAD
   { name: "Psy Trance", url: "https://radio.mugadavanje.rs/listen/mugadavanje/mugadavanje" }
 ];
 
 function playStation(url) {
   const audio = document.getElementById("audioPlayer");
   if (!audio) return;
-=======
-
-  // NOT BG
-  { name: "Psy Trance", url: "https://radio.mugadavanje.rs/listen/mugadavanje/mugadavanje" }
-];
-
-
-function playStation(url) {
-  const audio = document.getElementById("audioPlayer");
->>>>>>> 3c7b51dcdb7aaf2300500fbcce31ea2d68faa6ef
   audio.src = url;
   audio.play();
 }
 
 function pauseMusic() {
   const audio = document.getElementById("audioPlayer");
-<<<<<<< HEAD
   if (audio) audio.pause();
 }
 
 /* ==========================================================
    INIT
 ========================================================== */
-=======
-  audio.pause();
-}
-
-/* ===========================
-   INIT
-=========================== */
->>>>>>> 3c7b51dcdb7aaf2300500fbcce31ea2d68faa6ef
 
 function initAtmos() {
   applySavedTheme();
   updatePrompt();
-<<<<<<< HEAD
   listenForGlobalEffects(); // Инициализира се ЕДНОКРАТНО тук
 }
 
@@ -213,7 +161,7 @@ function triggerMatrixRain() {
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
 
-  const letters = "アァカサタナハマヤラワ0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  const letters = "ｱｧｶｻﾀﾅﾊﾏﾔﾗﾜ0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
   const size = 16;
   const columns = canvas.width / size;
   const drops = Array(Math.floor(columns)).fill(1);
@@ -303,8 +251,3 @@ function triggerSecretFlash() {
 
   setTimeout(() => flash.remove(), 800);
 }
-=======
-}
-
-document.addEventListener("DOMContentLoaded", initAtmos);
->>>>>>> 3c7b51dcdb7aaf2300500fbcce31ea2d68faa6ef
