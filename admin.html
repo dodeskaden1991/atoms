@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 <!DOCTYPE html>
 <html lang="bg">
 <head>
@@ -12,7 +11,6 @@
 
   <h1>Atmos Admin Panel</h1>
 
-  <!-- LOGIN FORM -->
   <div id="loginBox">
     <h2>Вход</h2>
     <input id="adminEmail" type="email" placeholder="Email">
@@ -21,7 +19,6 @@
     <p id="loginStatus"></p>
   </div>
 
-  <!-- ADMIN ACTIONS -->
   <div id="adminPanel" style="display:none;">
     <h2>Административни действия</h2>
 
@@ -31,7 +28,6 @@
     <p id="adminStatus"></p>
   </div>
 
-  <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
@@ -40,46 +36,3 @@
 
 </body>
 </html>
-=======
-<!DOCTYPE html>
-<html lang="bg">
-<head>
-  <meta charset="UTF-8">
-  <title>Atmos Admin</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="css/style.css">
-</head>
-
-<body class="dark">
-
-  <h1>Atmos Admin Panel</h1>
-
-  <!-- LOGIN FORM -->
-  <div id="loginBox">
-    <h2>Вход</h2>
-    <input id="adminEmail" type="email" placeholder="Email">
-    <input id="adminPass" type="password" placeholder="Парола">
-    <button onclick="adminLogin()">Вход</button>
-    <p id="loginStatus"></p>
-  </div>
-
-  <!-- ADMIN ACTIONS -->
-  <div id="adminPanel" style="display:none;">
-    <h2>Административни действия</h2>
-
-    <button onclick="deleteAll()">Изтрий ВСИЧКО</button>
-    <button onclick="deleteBeyond500()">Изтрий съобщения над 500</button>
-
-    <p id="adminStatus"></p>
-  </div>
-
-  <!-- Firebase -->
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
-
-  <script src="js/admin.js"></script>
-
-</body>
-</html>
->>>>>>> 3c7b51dcdb7aaf2300500fbcce31ea2d68faa6ef
