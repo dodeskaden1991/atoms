@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="bg">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <meta name="title" content="Atmos — дигитална свободна зона">
+  <meta name="description" content="Atmos — терминален чат без акаунти, без следене и без алгоритми. Място, където думите тежат повече от шума.">
+  <meta name="keywords" content="Atmos, terminal chat, minimal, privacy, freedom, text, digital zone">
+  <meta name="author" content="Deyan">
+
+  <!-- OpenGraph -->
+  <meta property="og:title" content="Atmos — дигитална свободна зона">
+  <meta property="og:description" content="Свободен терминален чат. Без акаунти. Без следене. Без алгоритми.">
+  <meta property="og:image" content="https://atoms.free.bg/atmos-preview.jpg">
+  <meta property="og:url" content="https://atoms.free.bg/">
+  <meta property="og:type" content="website">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="ico.png">
+
+  <title>Atmos — дигитална свободна зона</title>
+
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/effect.css">
+</head>
+
+<body class="dark">
+
+  <!-- AUDIO -->
+  <audio id="audioPlayer"></audio>
+  <audio id="notifySound" src="notify.mp3" preload="auto"></audio>
+
+  <!-- HEADER -->
+  <header id="header">
+    <h1>Atmos — дигитална свободна зона.</h1>
+    <p>Тук думите тежат повече от алгоритмите.</p>
+  </header>
+
+  <!-- MAIN LAYOUT -->
+  <div id="main">
+
+    <!-- CHAT WINDOW -->
+    <div id="chatWindow">
+      <pre id="messages"></pre>
+    </div>
+
+    <!-- TERMINAL -->
+    <div id="terminalPanel">
+      <div id="terminalOutput">Atmos Terminal v3.14<br>Type /help for commands.</div>
+
+      <div id="terminalLine">
+        <span id="terminalPrompt"></span>
+        <input id="terminalInput" type="text" autocomplete="off" autofocus>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- FOOTER -->
+  <footer>
+    © 2026 Atmos — Свободен чат. Без акаунти. Без следене.<br>
+    <small>Свали Android APK: <a href="https://drive.google.com/file/d/1BBvKb-JOxf6YZw-5dsp81hVEMedSRxHw/view?usp=sharing" target="_blank">ТУК</a></small>
+  </footer>
+
+  <!-- FIREBASE -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
+  <!-- JS MODULES -->
+  <script src="js/chat.js"></script>
+  <script src="js/main.js"></script>
+  <script src="js/terminal.js"></script>
+  <script src="js/easteregg.js"></script>
+
+  <!-- SERVICE WORKER -->
+  <script>
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/sw.js");
+    }
+  </script>
+
+</body>
+</html>
