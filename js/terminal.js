@@ -9,6 +9,7 @@ const terminalOutput = document.getElementById("terminalOutput");
    TERMINAL INPUT HANDLER
 =========================== */
 
+<<<<<<< HEAD
 if (terminalInput) {
   terminalInput.addEventListener("keydown", function (e) {
     if (e.key === "Enter") {
@@ -18,12 +19,22 @@ if (terminalInput) {
     }
   });
 }
+=======
+terminalInput.addEventListener("keydown", function (e) {
+  if (e.key === "Enter") {
+    const cmd = terminalInput.value.trim();
+    terminalInput.value = "";
+    runCommand(cmd);
+  }
+});
+>>>>>>> 3c7b51dcdb7aaf2300500fbcce31ea2d68faa6ef
 
 /* ===========================
    TERMINAL COMMAND PROCESSOR
 =========================== */
 
 function runCommand(cmd) {
+<<<<<<< HEAD
   if (!terminalOutput) return;
 
   const nick = getNickname();
@@ -55,10 +66,21 @@ function runCommand(cmd) {
     return;
   }
 
+=======
+  const nick = getNickname();
+  const prompt = `${nick}@atmos:~$`;
+
+  // echo command
+  terminalOutput.innerHTML += `\n${prompt} ${cmd}\n`;
+
+  let response = "";
+
+>>>>>>> 3c7b51dcdb7aaf2300500fbcce31ea2d68faa6ef
   /* ----- HELP ----- */
   if (cmd === "/help") {
     response =
 `Available commands:
+<<<<<<< HEAD
 
 CHAT COMMANDS
   /chat <msg>             Send a public message
@@ -94,13 +116,35 @@ TERMINAL COMMANDS
   /clear                  Clear terminal
   /about                  About Atmos
   /help                   Show this help`;
+=======
+  /help                 Show this help
+  /chat <msg>           Send a chat message
+  /su <nickname> <msg>  Send private message
+  /nickname <name>      Change your nickname
+  /theme dark           Switch to dark theme
+  /theme light          Switch to light theme
+  /play <num>           Play radio station
+  /pause                Pause music
+  /stations             List available stations
+  /random               Play random station
+  /clear                Clear terminal
+  /about                About Atmos
+  /volume <0-100>       Set radio volume`;
+>>>>>>> 3c7b51dcdb7aaf2300500fbcce31ea2d68faa6ef
   }
 
   /* ----- CHAT MESSAGE ----- */
   else if (cmd.startsWith("/chat ")) {
     const text = cmd.substring(6).trim();
+<<<<<<< HEAD
     if (!text) response = "Usage: /chat <message>";
     else {
+=======
+
+    if (text.length === 0) {
+      response = "Usage: /chat <message>";
+    } else {
+>>>>>>> 3c7b51dcdb7aaf2300500fbcce31ea2d68faa6ef
       sendChatMessage(text);
       response = "Message sent.";
     }
@@ -109,14 +153,25 @@ TERMINAL COMMANDS
   /* ----- PRIVATE MESSAGE ----- */
   else if (cmd.startsWith("/su ")) {
     const parts = cmd.split(" ");
+<<<<<<< HEAD
     if (parts.length < 3) response = "Usage: /su <nickname> <message>";
     else {
       const to = parts[1];
       const text = parts.slice(2).join(" ");
+=======
+
+    if (parts.length < 3) {
+      response = "Usage: /su <nickname> <message>";
+    } else {
+      const to = parts[1];
+      const text = parts.slice(2).join(" ");
+
+>>>>>>> 3c7b51dcdb7aaf2300500fbcce31ea2d68faa6ef
       sendPrivateMessage(to, text);
       response = `Private message sent to ${to}.`;
     }
   }
+<<<<<<< HEAD
 
   /* ----- MUTE / UNMUTE ----- */
   else if (cmd === "/mute") {
@@ -139,16 +194,36 @@ TERMINAL COMMANDS
     muteMain = false;
     muteRooms = false;
     response = "Unmuted all messages.";
+=======
+    /* ----- MUTE NOTIFICATIONS ----- */
+  else if (cmd === "/mute") {
+    notificationsMuted = true;
+    response = "Notifications muted.";
+  }
+
+  /* ----- UNMUTE NOTIFICATIONS ----- */
+  else if (cmd === "/unmute") {
+    notificationsMuted = false;
+    response = "Notifications unmuted.";
+>>>>>>> 3c7b51dcdb7aaf2300500fbcce31ea2d68faa6ef
   }
 
   /* ----- NICKNAME ----- */
   else if (cmd.startsWith("/nickname")) {
     const parts = cmd.split(" ");
+<<<<<<< HEAD
     if (parts.length < 2) response = "Usage: /nickname <newname>";
     else {
       const newNick = parts.slice(1).join(" ");
       setNickname(newNick);
       reloadChatMessages();
+=======
+    if (parts.length < 2) {
+      response = "Usage: /nickname <newname>";
+    } else {
+      const newNick = parts.slice(1).join(" ");
+      setNickname(newNick);
+>>>>>>> 3c7b51dcdb7aaf2300500fbcce31ea2d68faa6ef
       response = `Nickname changed to: ${newNick}`;
     }
   }
@@ -172,7 +247,13 @@ TERMINAL COMMANDS
     if (!isNaN(index) && stations[index - 1]) {
       playStation(stations[index - 1].url);
       response = `Playing: ${stations[index - 1].name}`;
+<<<<<<< HEAD
     } else response = "Invalid station number.";
+=======
+    } else {
+      response = "Invalid station number.";
+    }
+>>>>>>> 3c7b51dcdb7aaf2300500fbcce31ea2d68faa6ef
   }
 
   /* ----- PAUSE ----- */
@@ -180,6 +261,7 @@ TERMINAL COMMANDS
     pauseMusic();
     response = "Music paused.";
   }
+<<<<<<< HEAD
 
   /* ----- VOLUME ----- */
   else if (cmd.startsWith("/volume")) {
@@ -197,6 +279,29 @@ TERMINAL COMMANDS
   /* ----- STATIONS ----- */
   else if (cmd === "/stations") {
     response = stations.map((s, i) => `${i + 1}. ${s.name}`).join("\n");
+=======
+  /* ----- VOLUME ----- */
+  else if (cmd.startsWith("/volume")) {
+    const parts = cmd.split(" ");
+    if (parts.length < 2) {
+      response = "Usage: /volume <0-100>";
+    } else {
+      const value = parseInt(parts[1]);
+      if (isNaN(value) || value < 0 || value > 100) {
+        response = "Error: volume must be between 0 and 100.";
+      } else {
+        const audio = document.getElementById("audioPlayer");
+        audio.volume = value / 100;
+        response = `Volume set to ${value}%`;
+      }
+    }
+  }
+  /* ----- STATIONS ----- */
+  else if (cmd === "/stations") {
+    response = stations
+      .map((s, i) => `${i + 1}. ${s.name}`)
+      .join("\n");
+>>>>>>> 3c7b51dcdb7aaf2300500fbcce31ea2d68faa6ef
   }
 
   /* ----- RANDOM ----- */
@@ -222,6 +327,7 @@ TERMINAL COMMANDS
 Терминалът е входът към света.`;
   }
 
+<<<<<<< HEAD
   /* ----- SHOW SYSTEM ----- */
   else if (cmd.startsWith("/show")) {
     const parts = cmd.split(" ");
@@ -311,13 +417,25 @@ TERMINAL COMMANDS
     }
   }
 
+=======
+>>>>>>> 3c7b51dcdb7aaf2300500fbcce31ea2d68faa6ef
   /* ----- UNKNOWN COMMAND ----- */
   else {
     response = `Unknown command: ${cmd}`;
   }
 
+<<<<<<< HEAD
   terminalOutput.innerHTML += response + "\n";
   terminalOutput.scrollTop = terminalOutput.scrollHeight;
 
   updatePrompt();
 }
+=======
+  /* ----- PRINT RESPONSE ----- */
+  terminalOutput.innerHTML += response + "\n";
+  terminalOutput.scrollTop = terminalOutput.scrollHeight;
+
+  // update prompt after nickname change
+  updatePrompt();
+}
+>>>>>>> 3c7b51dcdb7aaf2300500fbcce31ea2d68faa6ef
