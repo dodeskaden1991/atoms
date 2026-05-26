@@ -36,7 +36,6 @@ body {
   border-radius: 3px;
 }
 
-<<<<<<< HEAD
 .roomMsg {
   background: #003355;
   color: #a8e4ff;
@@ -45,8 +44,6 @@ body {
   border-radius: 3px;
 }
 
-=======
->>>>>>> 3c7b51dcdb7aaf2300500fbcce31ea2d68faa6ef
 /* ===========================
    THEMES
 =========================== */
@@ -107,7 +104,6 @@ body.light header {
   overflow: hidden;
 }
 
-
 body.light #chatWindow {
   background: var(--crt-bg);
   color: var(--crt-text);
@@ -115,7 +111,7 @@ body.light #chatWindow {
 }
 
 #messages {
-   flex: 1 1 auto;
+  flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto; /* ❗ само тук */
   white-space: pre-wrap;
@@ -156,8 +152,9 @@ body.light #terminalPanel {
   font-size: 14px;
   margin-bottom: 0.5em;
   -webkit-overflow-scrolling: touch;
+  tab-size: 4;              /* Заковава размера на табулациите за /help секцията */
+  -moz-tab-size: 4;
 }
-
 
 /* ===========================
    TERMINAL INPUT LINE
@@ -251,4 +248,3 @@ body.light footer {
     -webkit-overflow-scrolling: touch;
   }
 }
-
