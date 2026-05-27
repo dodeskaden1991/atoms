@@ -43,21 +43,24 @@ function sanitizeHtml(text) {
   allowed.forEach(tag => {
     // Регулярни изрази, които хващат ескейпнатите тагове и техните атрибути
     const open = new RegExp(`&lt;(${tag})(\\s[^&>]*)?&gt;`, "gi");
-    const close = new RegExp(`&lt;\/(${tag})&gt;`, "gi");
+    
+    // ФИКС: Добавяме двойна наклонена черта \\ пред /, за да я хване RegExp конструктора правилно
+    const close = new RegExp(`&lt;\\/(${tag})&gt;`, "gi");
 
     // Връщаме обратно САМО чистите и разрешени тагове като истински HTML
     safe = safe.replace(open, "<$1$2>");
     safe = safe.replace(close, "</$1>");
   });
 
- safe = safe.replace(/<img(.*?)src=["'](.*?)["'](.*?)>/gi, (m, a, src, b) => {
+  // Логиката за картинките остава 1:1 недокосната
+  safe = safe.replace(/<img(.*?)src=["'](.*?)["'](.*?)>/gi, (m, a, src, b) => {
     if (!src.trim().toLowerCase().startsWith("https://")) return "";
     
     // Добавяме loading="lazy" и decoding="async" за светкавичен текст
     return `<img src="${src}" loading="lazy" decoding="async" style="max-width:100px;max-height:100px;display:inline-block;vertical-align:middle;" onload="this.parentNode.scrollTop = this.parentNode.scrollHeight;">`;
   });
 
-  // Допълнителна защита за линкове <a> срещу скрити javascript/data схеми
+  // Допълнителна защита за линкове <a> остава 1:1 недокосната
   safe = safe.replace(/<a(.*?)href=["'](.*?)["'](.*?)>/gi, (m, a, href, b) => {
     if (href.toLowerCase().includes("javascript:") || href.toLowerCase().includes("data:")) {
       return `<a${a}href="#"${b}>`;
@@ -179,13 +182,9 @@ function generateAscii(text) {
 =========================== */
 
 function fortuneMessage() {
-  const fortunes = [
-    "Щастието идва при подготвените.",
-    "Понякога мълчанието е най‑силният отговор.",
-    "Усмихни се — някой те наблюдава.",
-    "Днес е добър ден за ново начало.",
-    "Съдбата обича смелите."
-  ];
+  // Вземаме масива от външния файл window.atmosFortunes
+  // Ако файлът не се е заредил по някаква причина, слагаме едно резервно късметче
+  const fortunes = window.atmosFortunes || ["Късметът е с теб!"];
 
   const f = fortunes[Math.floor(Math.random() * fortunes.length)];
   sendSystemLine(`[FORTUNE] ${f}`);
@@ -231,11 +230,31 @@ function eightBall(cmd) {
   const question = cmd.substring(6).trim() || "Без въпрос";
 
   const answers = [
-    "Да.",
-    "Не.",
-    "Може би.",
+    // Положителни (10)
     "Със сигурност.",
-    "Не питай това пак."
+    "Определено е така.",
+    "Без съмнение.",
+    "Да, абсолютно.",
+    "Можеш да разчиташ на това.",
+    "Както го виждам, да.",
+    "Най-вероятно.",
+    "Изглежда добре.",
+    "Да.",
+    "Знаците сочат към да.",
+
+    // Неутрални (5)
+    "Опитай пак.",
+    "Попитай отново по-късно.",
+    "По-добре да не ти казвам сега.",
+    "Не мога да предвидя сега.",
+    "Концентрирай се и попитай пак.",
+
+    // Отрицателни (5)
+    "Не разчитай на това.",
+    "Моят отговор е не.",
+    "Моите източници казват не.",
+    "Изглежда зле.",
+    "Много малко вероятно."
   ];
 
   const answer = answers[Math.floor(Math.random() * answers.length)];

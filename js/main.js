@@ -30,7 +30,19 @@ function setNickname(newNick) {
 function updatePrompt() {
   const nick = getNickname();
   const prompt = document.getElementById("terminalPrompt");
-  if (prompt) prompt.textContent = `${nick}@atmos:~$ `;
+  if (!prompt) return;
+
+  // Четем поднивото от localStorage
+  let mode = JSON.parse(localStorage.getItem("atmos_mode")) || { isActive: false, type: "", target: "" };
+  let promptText = `${nick}@atmos:~$ `;
+
+  if (mode.isActive) {
+    if (mode.type === "chat") promptText = `${nick}@atmos[CHAT]:~$ `;
+    if (mode.type === "su") promptText = `${nick}@atmos[SU:${mode.target}]:~$ `;
+    if (mode.type === "room") promptText = `${nick}@atmos[ROOM:${mode.target}]:~$ `;
+  }
+
+  prompt.textContent = promptText;
 }
 
 /* ==========================================================

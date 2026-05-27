@@ -13,7 +13,7 @@ if (terminalInput) {
   terminalInput.addEventListener("keydown", function (e) {
     if (e.key === "Enter") {
       const cmd = terminalInput.value.trim();
-      terminalInput.value = "";
+      terminalInput.value = ""; // Твоят инпут се чисти тук, затова функцията долу няма да го пипа
       runCommand(cmd);
     }
   });
@@ -29,10 +29,53 @@ function runCommand(cmd) {
   const nick = getNickname();
   const prompt = `${nick}@atmos:~$`;
 
+  // Зареждаме състоянието за подниво директно от localStorage
+  let terminalMode = JSON.parse(localStorage.getItem("atmos_mode")) || { isActive: false, type: "", target: "" };
+
   // Ескейпваме командата за логовете на самия терминал, за да не се изпълнява HTML в него
   const safeCmdLog = cmd.replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-  // HTML injection safety: ако започва с < &#8594; не е команда
+  // 1. СТРИКТНА ПРОВЕРКА ЗА ИЗХОД (.exit) - работи в абсолютно всяко състояние
+  if (cmd === ".exit") {
+    if (terminalMode.isActive) {
+      localStorage.setItem("atmos_mode", JSON.stringify({ isActive: false, type: "", target: "" }));
+      terminalOutput.innerHTML += `\n${prompt} ${safeCmdLog}\nExited interactive mode.\n`;
+      terminalOutput.scrollTop = terminalOutput.scrollHeight;
+      updatePrompt();
+      return;
+    }
+    terminalOutput.innerHTML += `\n${prompt} ${safeCmdLog}\nTerminal is already in standard mode.\n`;
+    terminalOutput.scrollTop = terminalOutput.scrollHeight;
+    return;
+  }
+
+  // 2. АКО СМЕ В АКТИВНО ПОДНИВО: Хваща чистия текст и го пренасочва на секундата
+  if (terminalMode.isActive) {
+    if (cmd.length === 0) return; // Празен Enter - пропускаме
+
+    // Определяме какъв промпт да се отпечата в терминала за лог на съобщението
+    let currentPrompt = `${nick}@atmos:~$`;
+    if (terminalMode.type === "chat") currentPrompt = `${nick}@atmos[CHAT]:~$`;
+    if (terminalMode.type === "su") currentPrompt = `${nick}@atmos[SU:${terminalMode.target}]:~$`;
+    if (terminalMode.type === "room") currentPrompt = `${nick}@atmos[ROOM:${terminalMode.target}]:~$`;
+
+    // Логваме какво сме написали
+    terminalOutput.innerHTML += `\n${currentPrompt} ${safeCmdLog}\n`;
+
+    // Пращаме към съответната бекенд функция
+    if (terminalMode.type === "chat") {
+      sendChatMessage(cmd);
+    } else if (terminalMode.type === "su") {
+      sendPrivateMessage(terminalMode.target, cmd);
+    } else if (terminalMode.type === "room") {
+      sendRoomMessage(terminalMode.target, cmd);
+    }
+
+    terminalOutput.scrollTop = terminalOutput.scrollHeight;
+    return;
+  }
+
+  // HTML injection safety: ако започва с < → не е команда
   if (cmd.startsWith("<")) {
     terminalOutput.innerHTML += `\n${prompt} ${safeCmdLog}\nUnknown command.\n`;
     terminalOutput.scrollTop = terminalOutput.scrollHeight;
@@ -63,37 +106,96 @@ function runCommand(cmd) {
 CHAT COMMANDS
   /chat <msg>\t\t\tSend a public message
   /su <nick> <msg>\t\t\t\tSend a private message
-  /nickname <name>\t\t\tChange your nickname
+  /nickname <name>\t\tChange your nickname
 
 ROOM COMMANDS
-  /room enter <name>\t\t\tJoin a room
-  /room leave <name>'t\t\tLeave a room
-  /room list\t\t\tList joined rooms
+  /room enter <name>\t\tJoin a room
+  /room leave <name>\t\tLeave a room
+  /room list\t\tList joined rooms
   /room <name> <msg>\t\t\tSend message to a room
   /show all\t\t\tShow all messages (default)
-  /show main\t\t\tShow only main + private
-  /show private\t\t\tShow only private messages
+  /show main\t\tShow only main + private
+  /show private\t\tShow only private messages
   /show <room>\t\t\tShow only a specific room + private
+
+NAVIGATION COMMANDS (INTERACTIVE MODE)
+  /cd chat\t\t\tEnter interactive public chat
+  /cd su <nick>\t\t\tEnter interactive private chat
+  /cd room <name>\t\t\tEnter interactive room chat
+  .exit\t\t\t\tExit interactive mode back to shell
 
 NOTIFICATION COMMANDS
   /mute\t\t\t\tMute main + rooms
-  /mute main\t\t\tMute only main messages
-  /mute rooms\t\t\tMute only room messages
+  /mute main\t\tMute only main messages
+  /mute rooms\t\tMute only room messages
   /unmute\t\t\tUnmute everything
 
 RADIO COMMANDS
   /play <num>\t\t\tPlay radio station
   /pause\t\t\tPause radio
-  /volume <0-100>\t\tSet radio volume
+  /volume <0-100>\tSet radio volume
   /stations\t\t\tList available stations
   /random\t\t\tPlay random station
 
 TERMINAL COMMANDS
-  /theme dark\t\t\tSwitch to dark theme
-  /theme light\t\t\tSwitch to light theme
+  /theme dark\t\tSwitch to dark theme
+  /theme light\t\tSwitch to light theme
   /clear\t\t\tClear terminal
   /about\t\t\tAbout Atmos
   /help\t\t\t\tShow this help`;
+  }
+
+  /* ----- NAVIGATION SYSTEM: /cd ----- */
+  else if (cmd.startsWith("/cd")) {
+    const parts = cmd.split(/\s+/);
+
+    if (parts.length === 1) {
+      response = "Error: Invalid directory format. Usage: /cd [chat | su <nick> | room <name>]";
+    } else {
+      const targetMode = parts[1].toLowerCase();
+
+      if (targetMode === "chat") {
+        if (parts.length === 2) {
+          localStorage.setItem("atmos_mode", JSON.stringify({ isActive: true, type: "chat", target: "" }));
+          response = "Entered interactive CHAT mode. Type messages freely. Type '.exit' to leave.";
+          setTimeout(updatePrompt, 10);
+        } else {
+          response = "Error: /cd chat does not take extra arguments.";
+        }
+      } 
+      
+      else if (targetMode === "su") {
+        if (parts.length === 3) {
+          const targetUser = parts[2];
+          localStorage.setItem("atmos_mode", JSON.stringify({ isActive: true, type: "su", target: targetUser }));
+          response = `Entered interactive PRIVATE mode with [${targetUser}]. Type '.exit' to leave.`;
+          setTimeout(updatePrompt, 10);
+        } else {
+          response = "Error: Invalid format. Usage: /cd su <nickname>";
+        }
+      } 
+      
+      else if (targetMode === "room") {
+        if (parts.length === 3) {
+          const roomName = parts[2];
+          
+          const rooms = getJoinedRooms();
+          if (!rooms.includes(roomName)) {
+            response = `Error: You cannot enter directory '${roomName}'. You must join the room first via '/room enter ${roomName}'`;
+          } else {
+            localStorage.setItem("atmos_mode", JSON.stringify({ isActive: true, type: "room", target: roomName }));
+            response = `Entered interactive ROOM mode [${roomName}]. Type '.exit' to leave.`;
+            setTimeout(updatePrompt, 10);
+          }
+        } else {
+          response = "Error: Invalid format. Usage: /cd room <room_name>";
+        }
+      } 
+      
+      else {
+        response = `Error: Unknown directory '${parts[1]}'.`;
+      }
+    }
   }
 
   /* ----- CHAT MESSAGE ----- */
@@ -256,7 +358,6 @@ TERMINAL COMMANDS
     const parts = cmd.split(" ");
     const action = parts[1];
 
-    // Списък със системни и забранени думи за имена на стаи
     const forbiddenRooms = ["enter", "leave", "list", "private", "main"];
 
     if (!action) response = "Usage: /room <enter|leave|list|roomname> [message]";
