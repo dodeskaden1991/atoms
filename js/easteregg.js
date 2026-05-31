@@ -1,6 +1,6 @@
-/* ===========================
-   EASTER EGG COMMANDS
-=========================== */
+/* ===================================================================
+   EASTER EGG COMMANDS CONFIG
+=================================================================== */
 
 const easterEggCommands = {
   "/matrix": cmdMatrix,
@@ -13,11 +13,11 @@ const easterEggCommands = {
   "/roll": rollDice,
   "/coin": flipCoin,
   "/hack": cmdHack,
-  "/html": cmdHtml,          // ← Добавено и напълно интегрирано
+  "/html": cmdHtml,
 };
 
 const forbiddenHtmlPatterns = [
-  /on\w+\s*=/i,          // Хваща абсолютно всички JavaScript събития (onload, onclick, onerror и т.н.)
+  /on\w+\s*=/i,
   /script/i,
   /javascript:/i,
   /<iframe/i,
@@ -32,75 +32,67 @@ function isDangerousHtml(html) {
 }
 
 function sanitizeHtml(text) {
-  // Първо ескейпваме всичко глобално за сигурност
   let safe = text
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");
 
-  // Списъкът с твоите разрешени тагове
   const allowed = ["b", "i", "u", "code", "mark", "small", "a", "font", "img"];
 
   allowed.forEach(tag => {
-    // Регулярни изрази, които хващат ескейпнатите тагове и техните атрибути
     const open = new RegExp(`&lt;(${tag})(\\s[^&>]*)?&gt;`, "gi");
-    
-    // ФИКС: Добавяме двойна наклонена черта \\ пред /, за да я хване RegExp конструктора правилно
     const close = new RegExp(`&lt;\\/(${tag})&gt;`, "gi");
-
-    // Връщаме обратно САМО чистите и разрешени тагове като истински HTML
     safe = safe.replace(open, "<$1$2>");
     safe = safe.replace(close, "</$1>");
   });
 
-  // Логиката за картинките остава 1:1 недокосната
   safe = safe.replace(/<img(.*?)src=["'](.*?)["'](.*?)>/gi, (m, a, src, b) => {
-    if (!src.trim().toLowerCase().startsWith("https://")) return "";
-    
-    // Добавяме loading="lazy" и decoding="async" за светкавичен текст
-    return `<img src="${src}" loading="lazy" decoding="async" style="max-width:100px;max-height:100px;display:inline-block;vertical-align:middle;" onload="this.parentNode.scrollTop = this.parentNode.scrollHeight;">`;
+    let cleanSrc = src.trim();
+    if (!cleanSrc.toLowerCase().startsWith("http://") && !cleanSrc.toLowerCase().startsWith("https://")) {
+      cleanSrc = "https://" + cleanSrc;
+    }
+    return `<img src="${cleanSrc}" loading="lazy" decoding="async" style="max-width:100px;max-height:100px;display:inline-block;vertical-align:middle;" onload="this.parentNode.scrollTop = this.parentNode.scrollHeight;">`;
   });
 
-  // Допълнителна защита за линкове <a> остава 1:1 недокосната
   safe = safe.replace(/<a(.*?)href=["'](.*?)["'](.*?)>/gi, (m, a, href, b) => {
-    if (href.toLowerCase().includes("javascript:") || href.toLowerCase().includes("data:")) {
-      return `<a${a}href="#"${b}>`;
+    let cleanHref = href.trim();
+    if (cleanHref.toLowerCase().includes("javascript:") || cleanHref.toLowerCase().includes("data:")) {
+      return `<a href="#">`;
     }
-    return `<a${a}href="${href}" target="_blank" rel="noopener noreferrer"${b}>`;
+    if (!cleanHref.toLowerCase().startsWith("http://") && !cleanHref.toLowerCase().startsWith("https://")) {
+      cleanHref = "https://" + cleanHref;
+    }
+    return `<a href="${cleanHref}" target="_blank" rel="noopener noreferrer">`;
   });
 
   return safe;
 }
 
-/* ===========================
-   COMMAND CHECK
-=========================== */
+/* ===================================================================
+   COMMAND ENGINE CHECKS
+=================================================================== */
 
 function isEasterEggCommand(cmd) {
   const base = cmd.split(" ")[0];
   return easterEggCommands[base] !== undefined;
 }
 
-/* ===========================
-   COMMAND EXECUTION
-=========================== */
-
 function runEasterEggCommand(cmd) {
   const base = cmd.split(" ")[0];
   return easterEggCommands[base](cmd);
 }
 
-/* ===========================
+/* ===================================================================
    MATRIX EFFECT
-=========================== */
+=================================================================== */
 
 function cmdMatrix() {
   sendSystemLine(`${getNickname()} пусна Matrix.`);
   sendGlobalEffect("matrix");
 }
 
-/* ===========================
+/* ===================================================================
    KICK POPUP
-=========================== */
+=================================================================== */
 
 function cmdKick(cmd) {
   const target = cmd.split(" ")[1];
@@ -110,9 +102,9 @@ function cmdKick(cmd) {
   sendGlobalEffect("kick", target);
 }
 
-/* ===========================
-   ASCII BANNER
-=========================== */
+/* ===================================================================
+   ASCII BANNER - BOLD & DETAILED (FIGLET STYLE, 7 ROWS)
+=================================================================== */
 
 function asciiBanner(cmd) {
   const text = cmd.substring(7).trim();
@@ -124,85 +116,571 @@ function asciiBanner(cmd) {
 }
 
 function generateAscii(text) {
-  const font = {
-    "A": ["    ___   ", "   / _ \\  ", "  / /_\\ \\ ", "  |  _  | ", "  | | | | ", "  \\_| |_/ "],
-    "B": [" ______  ", " | ___ \\ ", " | |_/ / ", " | ___ \\ ", " | |_/ / ", " \\____/  "],
-    "C": ["  _____  ", " /  __ \\ ", " | /  \\/ ", " | |     ", " | \\__/\\ ", "  \\____/ "],
-    "D": [" ______  ", " |  _  \\ ", " | | | | ", " | | | | ", " | |/ /  ", " |___/   "],
-    "E": [" ______  ", " |  ___| ", " | |_    ", " |  _|   ", " | |     ", " \\_|     "],
-    "F": [" ______  ", " |  ___| ", " | |_    ", " |  _|   ", " | |     ", " \\_|     "],
-    "G": ["  _____  ", " /  __ \\ ", " | |  \\/ ", " | | __  ", " | |_\\ \\ ", "  \\____/ "],
-    "H": [" _   _   ", " | | | | ", " | |_| | ", " |  _  | ", " | | | | ", " \\_| |_/ "],
-    "I": [" _____ ", " |_   _|", "   | |  ", "   | |  ", "  _| |_ ", "  \\___/ "],
-    "J": ["      ___ ", "     |_  |", "       | |", "       | |", "   /\\__/ /", "   \\____/ "],
-    "K": [" _   __ ", " | | / /", " | |/ / ", " |   \\ ", " | |\\  \\", " \\_| \\_/ "],
-    "L": [" _      ", " | |     ", " | |     ", " | |     ", " | |____ ", " \\_____/ "],
-    "M": [" __  __ ", " |  \\/  |", " | .  . |", " | |\\/| |", " | |  | |", " \\_|  |_/ "],
-    "N": [" _   _  ", " | \\ | | ", " |  \\| | ", " | . ` | ", " | |\\  | ", " \\_| \\_/ "],
-    "O": ["  _____  ", " /  _  \\ ", " | | | | ", " | | | | ", " | |_| | ", " \\_____/ "],
-    "P": [" ______  ", " | ___ \\ ", " | |_/ / ", " |  __/  ", " | |     ", " \\_|     "],
-    "Q": ["  _____  ", " /  _  \\ ", " | | | | ", " | | | | ", " | |/ /  ", " \\___/\\_\\"],
-    "R": [" ______  ", " | ___ \\ ", " | |_/ / ", " |    /  ", " | |\\ \\  ", " \\_| \\_| "],
-    "S": ["  _____ ", " /  ___|", " \\ `--. ", "  `--. \\", " /\\__/ /", " \\____/ "],
-    "T": [" _____ ", " |_   _|", "   | |  ", "   | |  ", "   | |  ", "   \\_/  "],
-    "U": [" _   _  ", " | | | | ", " | | | | ", " | | | | ", " | |_| | ", "  \\___/  "],
-    "V": [" _   _ ", " | | | |", " | | | |", " | | | |", " \\ \\_/ /", "  \\___/ "],
-    "W": [" _    _ ", " | |  | |", " | |  | |", " | |/\\| |", " \\  /\\  /", "  \\/  \\/ "],
-    "X": [" __   __ ", " \\ \\ / / ", "  \\ V /  ", "  /   \\  ", " / /^\\ \\ ", " \\/   \\/ "],
-    "Y": [" _   _ ", " | | | |", " | |_| |", " \\___  |", "     | |", "     \\_/ "],
-    "Z": [" ______ ", " |___  /", "    / / ", "   / /  ", " ./ /___", " \\_____/ "],
-    "0": ["  _____  ", " /  _  \\ ", " | | | | ", " | | | | ", " | |_| | ", " \\_____/ "],
-    "1": ["  __ ", " /_ |", "  | |", "  | |", "  | |", "  |_|"],
-    "2": ["  _____ ", " |___  |", "    / / ", "   / /  ", "  / /__ ", " |_____|"],
-    "3": ["  _____ ", " |___  |", "    _| |", "    |_  <", "  ___| |", " |____/ "],
-    "4": [" _  _   ", " | || |  ", " | || |_ ", " |__   _|", "     | |  ", "     |_|  "],
-    "5": ["  _____ ", " |  ___|", " |___ \\ ", "      \\ \\", " /\\__/ /", " \\____/ "],
-    "6": ["  _____ ", " /  ___|", " | |___ ", " |  _  \\", " | |_| |", " \\_____/ "],
-    "7": [" ______ ", " |___  /", "    / / ", "   / /  ", "  / /   ", " /_/    "],
-    "8": ["  _____ ", " /  _  \\", " \\ |_| /", " /  _  \\", " | |_| |", " \\_____/ "],
-    "9": ["  _____ ", " /  _  \\", " | |_| |", " \\____ |", "  ___| |", " |_____/ "],
-    " ": ["   ","   ","   ","   ","   ","   "]
-  };
-
   const upper = text.toUpperCase();
-  let out = "";
-
-  for (let row = 0; row < 6; row++) {
-    for (let char of upper) {
-      out += (font[char] ? font[char][row] : " ??? ") + " ";
+  let rows = ['', '', '', '', '', '', ''];
+  
+  for (let char of upper) {
+    switch(char) {
+      case 'A':
+        rows[0] += "   ███   ";
+        rows[1] += "  █████  ";
+        rows[2] += " ██   ██ ";
+        rows[3] += " ███████ ";
+        rows[4] += " ██   ██ ";
+        rows[5] += " ██   ██ ";
+        rows[6] += " ██   ██ ";
+        break;
+      case 'B':
+        rows[0] += "██████  ";
+        rows[1] += "██   ██ ";
+        rows[2] += "██   ██ ";
+        rows[3] += "██████  ";
+        rows[4] += "██   ██ ";
+        rows[5] += "██   ██ ";
+        rows[6] += "██████  ";
+        break;
+      case 'C':
+        rows[0] += " ██████ ";
+        rows[1] += "██     ";
+        rows[2] += "██     ";
+        rows[3] += "██     ";
+        rows[4] += "██     ";
+        rows[5] += "██     ";
+        rows[6] += " ██████ ";
+        break;
+      case 'D':
+        rows[0] += "██████  ";
+        rows[1] += "██   ██ ";
+        rows[2] += "██   ██ ";
+        rows[3] += "██   ██ ";
+        rows[4] += "██   ██ ";
+        rows[5] += "██   ██ ";
+        rows[6] += "██████  ";
+        break;
+      case 'E':
+        rows[0] += "███████";
+        rows[1] += "██     ";
+        rows[2] += "██     ";
+        rows[3] += "█████  ";
+        rows[4] += "██     ";
+        rows[5] += "██     ";
+        rows[6] += "███████";
+        break;
+      case 'F':
+        rows[0] += "███████";
+        rows[1] += "██     ";
+        rows[2] += "██     ";
+        rows[3] += "█████  ";
+        rows[4] += "██     ";
+        rows[5] += "██     ";
+        rows[6] += "██     ";
+        break;
+      case 'G':
+        rows[0] += " ██████ ";
+        rows[1] += "██      ";
+        rows[2] += "██      ";
+        rows[3] += "██  ███ ";
+        rows[4] += "██   ██ ";
+        rows[5] += "██   ██ ";
+        rows[6] += " ██████ ";
+        break;
+      case 'H':
+        rows[0] += "██   ██";
+        rows[1] += "██   ██";
+        rows[2] += "██   ██";
+        rows[3] += "███████";
+        rows[4] += "██   ██";
+        rows[5] += "██   ██";
+        rows[6] += "██   ██";
+        break;
+      case 'I':
+        rows[0] += " █████ ";
+        rows[1] += "   █   ";
+        rows[2] += "   █   ";
+        rows[3] += "   █   ";
+        rows[4] += "   █   ";
+        rows[5] += "   █   ";
+        rows[6] += " █████ ";
+        break;
+      case 'J':
+        rows[0] += "    ███";
+        rows[1] += "      █";
+        rows[2] += "      █";
+        rows[3] += "      █";
+        rows[4] += "██   █";
+        rows[5] += "██   █";
+        rows[6] += " █████";
+        break;
+      case 'K':
+        rows[0] += "██   ██";
+        rows[1] += "██  ██ ";
+        rows[2] += "██ ██  ";
+        rows[3] += "█████  ";
+        rows[4] += "██ ██  ";
+        rows[5] += "██  ██ ";
+        rows[6] += "██   ██";
+        break;
+      case 'L':
+        rows[0] += "██     ";
+        rows[1] += "██     ";
+        rows[2] += "██     ";
+        rows[3] += "██     ";
+        rows[4] += "██     ";
+        rows[5] += "██     ";
+        rows[6] += "███████";
+        break;
+      case 'M':
+        rows[0] += "██   ██";
+        rows[1] += "███ ███";
+        rows[2] += "███████";
+        rows[3] += "██ █ ██";
+        rows[4] += "██   ██";
+        rows[5] += "██   ██";
+        rows[6] += "██   ██";
+        break;
+      case 'N':
+        rows[0] += "██   ██";
+        rows[1] += "███  ██";
+        rows[2] += "████ ██";
+        rows[3] += "██ ████";
+        rows[4] += "██  ███";
+        rows[5] += "██   ██";
+        rows[6] += "██   ██";
+        break;
+      case 'O':
+        rows[0] += " ██████ ";
+        rows[1] += "██   ██";
+        rows[2] += "██   ██";
+        rows[3] += "██   ██";
+        rows[4] += "██   ██";
+        rows[5] += "██   ██";
+        rows[6] += " ██████ ";
+        break;
+      case 'P':
+        rows[0] += "██████  ";
+        rows[1] += "██   ██ ";
+        rows[2] += "██   ██ ";
+        rows[3] += "██████  ";
+        rows[4] += "██      ";
+        rows[5] += "██      ";
+        rows[6] += "██      ";
+        break;
+      case 'Q':
+        rows[0] += " ██████ ";
+        rows[1] += "██   ██";
+        rows[2] += "██   ██";
+        rows[3] += "██   ██";
+        rows[4] += "██ █ ██";
+        rows[5] += "██  ███";
+        rows[6] += " █████ █";
+        break;
+      case 'R':
+        rows[0] += "██████  ";
+        rows[1] += "██   ██ ";
+        rows[2] += "██   ██ ";
+        rows[3] += "██████  ";
+        rows[4] += "██   ██ ";
+        rows[5] += "██   ██ ";
+        rows[6] += "██   ██ ";
+        break;
+      case 'S':
+        rows[0] += " ██████ ";
+        rows[1] += "██      ";
+        rows[2] += "██      ";
+        rows[3] += " ██████ ";
+        rows[4] += "      ██";
+        rows[5] += "      ██";
+        rows[6] += " ██████ ";
+        break;
+      case 'T':
+        rows[0] += "████████";
+        rows[1] += "    ██  ";
+        rows[2] += "    ██  ";
+        rows[3] += "    ██  ";
+        rows[4] += "    ██  ";
+        rows[5] += "    ██  ";
+        rows[6] += "    ██  ";
+        break;
+      case 'U':
+        rows[0] += "██   ██";
+        rows[1] += "██   ██";
+        rows[2] += "██   ██";
+        rows[3] += "██   ██";
+        rows[4] += "██   ██";
+        rows[5] += "██   ██";
+        rows[6] += " ██████";
+        break;
+      case 'V':
+        rows[0] += "██   ██";
+        rows[1] += "██   ██";
+        rows[2] += "██   ██";
+        rows[3] += " ██ ██ ";
+        rows[4] += " ██ ██ ";
+        rows[5] += "  ███  ";
+        rows[6] += "  ███  ";
+        break;
+      case 'W':
+        rows[0] += "██   ██";
+        rows[1] += "██   ██";
+        rows[2] += "██   ██";
+        rows[3] += "██ █ ██";
+        rows[4] += "███████";
+        rows[5] += "██   ██";
+        rows[6] += "██   ██";
+        break;
+      case 'X':
+        rows[0] += "██   ██";
+        rows[1] += " ██ ██ ";
+        rows[2] += "  ███  ";
+        rows[3] += "  ███  ";
+        rows[4] += "  ███  ";
+        rows[5] += " ██ ██ ";
+        rows[6] += "██   ██";
+        break;
+      case 'Y':
+        rows[0] += "██   ██";
+        rows[1] += " ██ ██ ";
+        rows[2] += "  ███  ";
+        rows[3] += "  ███  ";
+        rows[4] += "   █   ";
+        rows[5] += "   █   ";
+        rows[6] += "   █   ";
+        break;
+      case 'Z':
+        rows[0] += "███████";
+        rows[1] += "    ██ ";
+        rows[2] += "   ██  ";
+        rows[3] += "  ██   ";
+        rows[4] += " ██    ";
+        rows[5] += "██     ";
+        rows[6] += "███████";
+        break;
+      case '0':
+        rows[0] += " ██████ ";
+        rows[1] += "██   ██";
+        rows[2] += "██   ██";
+        rows[3] += "██   ██";
+        rows[4] += "██   ██";
+        rows[5] += "██   ██";
+        rows[6] += " ██████ ";
+        break;
+      case '1':
+        rows[0] += "   ██   ";
+        rows[1] += "  ███   ";
+        rows[2] += "    ██  ";
+        rows[3] += "    ██  ";
+        rows[4] += "    ██  ";
+        rows[5] += "    ██  ";
+        rows[6] += "  █████ ";
+        break;
+      case '2':
+        rows[0] += " ██████ ";
+        rows[1] += "      ██";
+        rows[2] += "      ██";
+        rows[3] += " ██████ ";
+        rows[4] += "██      ";
+        rows[5] += "██      ";
+        rows[6] += "████████";
+        break;
+      case '3':
+        rows[0] += " ██████ ";
+        rows[1] += "      ██";
+        rows[2] += "      ██";
+        rows[3] += " ██████ ";
+        rows[4] += "      ██";
+        rows[5] += "      ██";
+        rows[6] += " ██████ ";
+        break;
+      case '4':
+        rows[0] += "██   ██";
+        rows[1] += "██   ██";
+        rows[2] += "██   ██";
+        rows[3] += "███████";
+        rows[4] += "     ██";
+        rows[5] += "     ██";
+        rows[6] += "     ██";
+        break;
+      case '5':
+        rows[0] += "███████";
+        rows[1] += "██      ";
+        rows[2] += "██      ";
+        rows[3] += "███████ ";
+        rows[4] += "      ██";
+        rows[5] += "      ██";
+        rows[6] += "███████ ";
+        break;
+      case '6':
+        rows[0] += " ██████ ";
+        rows[1] += "██      ";
+        rows[2] += "██      ";
+        rows[3] += "███████ ";
+        rows[4] += "██   ██";
+        rows[5] += "██   ██";
+        rows[6] += " ██████ ";
+        break;
+      case '7':
+        rows[0] += "████████";
+        rows[1] += "      ██";
+        rows[2] += "     ██ ";
+        rows[3] += "    ██  ";
+        rows[4] += "   ██   ";
+        rows[5] += "  ██    ";
+        rows[6] += " ██     ";
+        break;
+      case '8':
+        rows[0] += " ██████ ";
+        rows[1] += "██   ██";
+        rows[2] += "██   ██";
+        rows[3] += " ██████ ";
+        rows[4] += "██   ██";
+        rows[5] += "██   ██";
+        rows[6] += " ██████ ";
+        break;
+      case '9':
+        rows[0] += " ██████ ";
+        rows[1] += "██   ██";
+        rows[2] += "██   ██";
+        rows[3] += " ███████";
+        rows[4] += "      ██";
+        rows[5] += "      ██";
+        rows[6] += " ██████ ";
+        break;
+      case ' ':
+        rows[0] += "        ";
+        rows[1] += "        ";
+        rows[2] += "        ";
+        rows[3] += "        ";
+        rows[4] += "        ";
+        rows[5] += "        ";
+        rows[6] += "        ";
+        break;
+      default:
+        rows[0] += "  ???   ";
+        rows[1] += "  ???   ";
+        rows[2] += "  ???   ";
+        rows[3] += "  ???   ";
+        rows[4] += "  ???   ";
+        rows[5] += "  ???   ";
+        rows[6] += "  ???   ";
     }
-    out += "\n";
+    rows[0] += " ";
+    rows[1] += " ";
+    rows[2] += " ";
+    rows[3] += " ";
+    rows[4] += " ";
+    rows[5] += " ";
+    rows[6] += " ";
+  }
+  
+  return rows.join('\n');
+}
+
+/* ===================================================================
+   ATMOS TERMINAL // COMPLETE FORTUNE ENGINE (DYNAMIC UTILS v10 - SYNCHRONOUS)
+=================================================================== */
+
+function fortuneMessage(cmd) {
+  // 1. Подсигуряване на базата с късмети от fortunes_data.js
+  const fortunes = window.atmosFortunes || ["Късметът е с теб!"];
+  const index = Math.floor(Math.random() * fortunes.length);
+  const f = fortunes[index];
+
+  if (!cmd) cmd = "/fortune";
+  const parts = cmd.trim().split(/\s+/).filter(x => x.length > 0);
+
+  // 2. Стандартна текстова команда: /fortune
+  if (parts.length === 1) {
+    sendSystemLine(`[FORTUNE] ${f}`);
+    return "Fortune delivered.";
   }
 
-  return out;
+  // 3. Графична команда за споделяне: /fortune share
+  if (parts.length === 2 && parts[1].toLowerCase() === "share") {
+    
+    const now = new Date();
+    const day = String(now.getDate()).padStart(2, '0');
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const year = now.getFullYear();
+    const dateStr = `${day}.${month}.${year}`;
+    const fullTerminalText = `[${dateStr}] Късметът: ${f}`;
+
+    // РОТАЦИЯ НА ХАКЕРСКИ ЛОКАЦИИ (100% СИНХРОННО И ЛОКАЛНО)
+    const fakeLocations = [
+      "TERMINAL CORE",
+      "LOCAL STORAGE",
+      "ERROR 404",
+      "SYSTEM32 ROOT",
+      "127.0.0.1",
+      "NULL POINTER",
+      "UNKNOWN NODE",
+      "PROXY LOOPBACK",
+      "DEEP WEB ANON",
+      "KERNEL PANIC",
+      "ROOT DIRECTORY"
+    ];
+    const locIndex = Math.floor(Math.random() * fakeLocations.length);
+    const dynamicLocation = fakeLocations[locIndex];
+
+    // Детекция за мобилно устройство
+    const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+    // Инициализиране на графичното Canvas ядро
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    canvas.width = 1080; canvas.height = 1080;
+
+    // Фон (Тъмен, дълбок киберпънк градиент)
+    const bgGradient = ctx.createRadialGradient(540, 540, 100, 540, 540, 800);
+    bgGradient.addColorStop(0, "#0c1013"); bgGradient.addColorStop(1, "#040507");
+    ctx.fillStyle = bgGradient; ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Лека фонова текстура (Скан линии)
+    ctx.strokeStyle = "rgba(0, 255, 51, 0.015)"; ctx.lineWidth = 1;
+    for (let i = 0; i < canvas.height; i += 4) {
+      ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(canvas.width, i); ctx.stroke();
+    }
+
+    // ДЖИДЖАНИЯТ СТИЛ: Ярки дебели неонови ъгли
+    ctx.strokeStyle = "#00ff33"; ctx.lineWidth = 6; const pad = 35; const len = 50;
+    // Горе вляво
+    ctx.beginPath(); ctx.moveTo(pad + len, pad); ctx.lineTo(pad, pad); ctx.lineTo(pad, pad + len); ctx.stroke();
+    // Горе вдясно
+    ctx.beginPath(); ctx.moveTo(canvas.width - pad - len, pad); ctx.lineTo(canvas.width - pad, pad); ctx.lineTo(canvas.width - pad, pad + len); ctx.stroke();
+    // Долу вляво
+    ctx.beginPath(); ctx.moveTo(pad + len, canvas.height - pad); ctx.lineTo(pad, canvas.height - pad); ctx.lineTo(pad, canvas.height - pad - len); ctx.stroke();
+    // Долу вдясно
+    ctx.beginPath(); ctx.moveTo(canvas.width - pad - len, canvas.height - pad); ctx.lineTo(canvas.width - pad, canvas.height - pad); ctx.lineTo(canvas.width - pad, canvas.height - pad - len); ctx.stroke();
+
+    // Заглавна линия (Тънка зелена хоризонтална рамка под хедъра)
+    ctx.strokeStyle = "rgba(0, 255, 51, 0.15)"; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(55, 95); ctx.lineTo(canvas.width - 55, 95); ctx.stroke();
+
+    // Текстове в Хедъра (Стил SYSTEM_ACTIVE)
+    ctx.fillStyle = "rgba(0, 255, 51, 0.6)"; ctx.font = "bold 24px monospace";
+    ctx.fillText("▲ ATMOS TERMINAL // SYSTEM_ACTIVE", 75, 75);
+    
+    // Малките декоративни хиксове в горния десен ъгъл `× ×`
+    ctx.fillStyle = "rgba(0, 255, 51, 0.4)"; ctx.font = "bold 22px monospace";
+    ctx.fillText("× ×", canvas.width - 120, 75);
+
+    // СТИЛ НА КЪСМЕТЧЕТО (По-голям, плътен и централно разположен)
+    ctx.font = "bold 42px monospace";
+    const words = fullTerminalText.split(' '); const lines = []; let currentLine = '';
+    for (let n = 0; n < words.length; n++) {
+      let testLine = currentLine + words[n] + ' ';
+      if (ctx.measureText(testLine).width > (canvas.width - 180) && n > 0) {
+        lines.push(currentLine.trim()); currentLine = words[n] + ' ';
+      } else { currentLine = testLine; }
+    }
+    lines.push(currentLine.trim());
+    
+    const totalHeight = lines.length * 65;
+    let startY = (canvas.height / 2) - (totalHeight / 2) + 20;
+
+    // Изчертаване на текста с лек неонов нюанс
+    ctx.fillStyle = "#00ff44";
+    for (let i = 0; i < lines.length; i++) {
+      ctx.fillText(lines[i], 90, startY + (i * 65));
+    }
+
+    // ФУТЪР: Линия и Статус данни долу
+    ctx.strokeStyle = "rgba(0, 255, 51, 0.15)"; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(55, canvas.height - 115); ctx.lineTo(canvas.width - 55, canvas.height - 115); ctx.stroke();
+
+    // Ляв футер блок (С въртящата се хакерска локация!)
+    ctx.fillStyle = "rgba(255, 255, 255, 0.25)"; ctx.font = "18px monospace";
+    ctx.fillText(`▶ NODE: ATOMS.FREE.BG // LOCATION: ${dynamicLocation}`, 75, canvas.height - 85);
+    ctx.fillText("SECURITY: ENCRYPTED_STATUS_OK", 75, canvas.height - 60);
+
+    // Десен футер блок (Зареждащ зелен правоъгълник от картинката)
+    ctx.fillStyle = "rgba(0, 255, 51, 0.15)";
+    ctx.fillRect(canvas.width - 230, canvas.height - 88, 150, 20);
+    ctx.fillStyle = "#00ff33";
+    ctx.fillRect(canvas.width - 230, canvas.height - 88, 100, 20); // Запълнен прогрес
+
+    try {
+      const imageBase64 = canvas.toDataURL("image/png");
+      const output = document.getElementById("terminalOutput") || document.body;
+      
+      const fbShareUrl = isMobile ? "https://m.facebook.com/" : "https://www.facebook.com/";
+      const xShareUrl = "https://x.com/intent/tweet";
+      const igShareUrl = "https://www.instagram.com/";
+      
+      const downloadHref = isMobile ? "https://tinyurl.com/bmnrux6t" : imageBase64;
+      const downloadAttr = isMobile ? "" : `download="atmos_fortune_${dateStr}.png"`;
+      const targetAttr = isMobile ? 'target="_blank"' : '';
+      
+      const uniqueId = Date.now();
+      const statusDivId = `db_status_${uniqueId}`;
+      const buttonLabel = isMobile ? "[ИЗТЕГЛИ КАРТИЧКАТА ЧРЕЗ БРАУЗЪР]" : "[СВАЛИ ИЗОБРАЖЕНИЕТО (PC)]";
+
+      setTimeout(() => {
+        output.innerHTML += `
+          <div class="terminal-card-container" style="margin: 20px 0; padding: 15px; border: 1px dashed #00ff33; background: #000; font-family: monospace;">
+            <p style="color: #00ff33; margin-bottom: 10px;">[SYSTEM] Картичката е структурирана успешно:</p>
+            <img src="${imageBase64}" style="width: 100%; max-width: 350px; border: 1px solid #00ff33; display: block; margin-bottom: 15px;" alt="Atmos Fortune"/>
+            
+            <a href="${downloadHref}" ${downloadAttr} ${targetAttr} rel="noopener noreferrer" style="background: #00ff33; color: #000; padding: 10px 18px; border: none; font-weight: bold; font-family: monospace; cursor: pointer; display: inline-block; margin-bottom: 15px; text-transform: uppercase; text-decoration: none;">
+              ${buttonLabel}
+            </a>
+
+            <div id="${statusDivId}" style="color: #888; font-size: 12px; margin-bottom: 10px;">[БЪФЕР] Инициализиране...</div>
+            <p style="color: #555; margin-bottom: 10px;">[МРЕЖИ] Публикувай квадрата от твоята галерия:</p>
+            <div class="share-buttons-group" style="display: flex; flex-wrap: wrap; gap: 10px;">
+              <a href="${fbShareUrl}" target="_blank" rel="noopener noreferrer" style="background: #3b5998; color: #fff; padding: 8px 15px; text-decoration: none; font-weight: bold; display: inline-block;">[FACEBOOK]</a>
+              <a href="${igShareUrl}" target="_blank" rel="noopener noreferrer" style="background: #e1306c; color: #fff; padding: 8px 15px; text-decoration: none; font-weight: bold; display: inline-block;">[INSTAGRAM]</a>
+              <a href="${xShareUrl}" target="_blank" rel="noopener noreferrer" style="background: #111; color: #fff; padding: 8px 15px; text-decoration: none; font-weight: bold; border: 1px solid #fff; display: inline-block;">[X / TWITTER]</a>
+            </div>
+          </div>
+        `;
+
+        // Бекграунд Firebase синхронизация
+        const activeDb = window.db || (typeof firebase !== "undefined" ? firebase.database() : null);
+        const statusDiv = document.getElementById(statusDivId);
+
+        if (activeDb) {
+          activeDb
+            .ref("fortune_buffer")
+            .set({
+              text: fullTerminalText,
+              date: dateStr,
+              timestamp: Date.now(),
+            })
+            .then(() => {
+              if (statusDiv) statusDiv.innerHTML = "<span style='color: #00ff33;'>[БЪФЕР] Успешна синхронизация!</span>";
+            })
+            .catch((err) => {
+              console.error("Firebase error:", err);
+              if (statusDiv) statusDiv.innerHTML = "<span style='color: #ff6666;'>[ГРЕШКА] Неуспех при синхронизацията</span>";
+            });
+        } else {
+          if (statusDiv) statusDiv.innerHTML = "<span style='color: #ffaa00;'>[ПРЕДУПРЕЖДЕНИЕ] Няма връзка с базата</span>";
+        }
+
+        window.scrollTo(0, document.body.scrollHeight);
+      }, 500);
+
+      return "Модулът за споделяне е готов.";
+    } catch (e) {
+      console.error(e);
+      return "Грешка в графичното ядро.";
+    }
+  }
+  return "Използвай: /fortune или /fortune share";
 }
 
-/* ===========================
-   FORTUNE
-=========================== */
-
-function fortuneMessage() {
-  // Вземаме масива от външния файл window.atmosFortunes
-  // Ако файлът не се е заредил по някаква причина, слагаме едно резервно късметче
-  const fortunes = window.atmosFortunes || ["Късметът е с теб!"];
-
-  const f = fortunes[Math.floor(Math.random() * fortunes.length)];
-  sendSystemLine(`[FORTUNE] ${f}`);
-  return "Fortune delivered.";
-}
-
-/* ===========================
+/* ===================================================================
    GLITCH EFFECT
-=========================== */
+=================================================================== */
 
 function cmdGlitch() {
   sendSystemLine(`${getNickname()} предизвика glitch.`);
   sendGlobalEffect("glitch");
 }
 
-/* ===========================
-   RAINBOW TEXT (Safe implementation)
-=========================== */
+/* ===================================================================
+   RAINBOW TEXT
+=================================================================== */
 
 function rainbowText(cmd) {
   let text = cmd.substring(8).trim();
@@ -222,15 +700,14 @@ function rainbowText(cmd) {
   return "Rainbow text sent.";
 }
 
-/* ===========================
+/* ===================================================================
    8BALL
-=========================== */
+=================================================================== */
 
 function eightBall(cmd) {
   const question = cmd.substring(6).trim() || "Без въпрос";
 
   const answers = [
-    // Положителни (10)
     "Със сигурност.",
     "Определено е така.",
     "Без съмнение.",
@@ -241,15 +718,11 @@ function eightBall(cmd) {
     "Изглежда добре.",
     "Да.",
     "Знаците сочат към да.",
-
-    // Неутрални (5)
     "Опитай пак.",
     "Попитай отново по-късно.",
     "По-добре да не ти казвам сега.",
     "Не мога да предвидя сега.",
     "Концентрирай се и попитай пак.",
-
-    // Отрицателни (5)
     "Не разчитай на това.",
     "Моят отговор е не.",
     "Моите източници казват не.",
@@ -263,9 +736,9 @@ function eightBall(cmd) {
   return "8ball answered.";
 }
 
-/* ===========================
+/* ===================================================================
    ROLL DICE
-=========================== */
+=================================================================== */
 
 function rollDice() {
   const n = Math.floor(Math.random() * 6) + 1;
@@ -273,9 +746,9 @@ function rollDice() {
   return "Dice rolled.";
 }
 
-/* ===========================
+/* ===================================================================
    COIN FLIP
-=========================== */
+=================================================================== */
 
 function flipCoin() {
   const result = Math.random() < 0.5 ? "Ези" : "Тура";
@@ -283,9 +756,9 @@ function flipCoin() {
   return "Coin flipped.";
 }
 
-/* ===========================
+/* ===================================================================
    HACK POPUP
-=========================== */
+=================================================================== */
 
 function cmdHack(cmd) {
   const target = cmd.split(" ")[1];
@@ -295,26 +768,20 @@ function cmdHack(cmd) {
   sendGlobalEffect("hack", target);
 }
 
-/* ===========================
+/* ===================================================================
    HTML INJECTION COMMAND
-=========================== */
+=================================================================== */
 
 function cmdHtml(cmd) {
   const raw = cmd.substring(5).trim();
   if (!raw) return "Usage: /html <html code>";
 
-  // 1) Бърза филтрация за тежки XSS атаки и опасни тагове
   if (isDangerousHtml(raw)) {
     sendSystemLine("Добър опит.");
     return "HTML blocked.";
   }
 
-  // 2) Пречистване на кода и превръщане на разрешените тагове в реални HTML обекти
   const safe = sanitizeHtml(raw);
-
-  // Промяната е ТУК - използваме обратни кавички `` за изпълнение на функцията
   sendSystemLine(`&lt;${getNickname()}&gt; HTML inject: ${safe}`);
-
-  // Връщаме чист текст към терминала, за да не се инжектира или променя нищо в него
   return "HTML inject payload parsed and sent.";
 }

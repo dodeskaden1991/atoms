@@ -140,6 +140,7 @@ RADIO COMMANDS
 TERMINAL COMMANDS
   /theme dark\t\tSwitch to dark theme
   /theme light\t\tSwitch to light theme
+  /generate text\tГенерирай уникално Стори за Instagram/FB
   /clear\t\t\tClear terminal
   /about\t\t\tAbout Atmos
   /help\t\t\t\tShow this help`;
@@ -306,6 +307,12 @@ TERMINAL COMMANDS
     const index = Math.floor(Math.random() * stations.length);
     playStation(stations[index].url);
     response = `Random station: ${stations[index].name}`;
+  }
+
+  /* ----- STORY GENERATOR: /generate ----- */
+  else if (cmd.startsWith("/generate")) {
+    // Извикваме глобалната функция, която добавихме в main.js
+    response = generateStoryMessage(cmd);
   }
 
   /* ----- CLEAR TERMINAL ----- */
