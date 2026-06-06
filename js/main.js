@@ -122,11 +122,7 @@ function sendGlobalEffect(name, payload = null) {
 }
 
 function listenForGlobalEffects() {
-  // if (!window.db) {
-  //   setTimeout(listenForGlobalEffects, 200);
-  //   return;
-  // }
-
+  
   db.ref("atmos_effects")
     .limitToLast(1)
     .on("child_added", snapshot => {
@@ -155,7 +151,44 @@ function triggerEffect(name, payload) {
     case "hack":
       triggerHackPopup(payload);
       break;
+
+    case "marvin":
+      triggerMarvinDepression(payload);
+      break;
   }
+}
+
+/* ==========================================================
+   MARVIN DEPRESSION
+========================================================== */
+
+let lastProcessedQuote = "";
+let lastProcessedTime = 0;
+
+function triggerMarvinDepression(quote) {
+  const now = Date.now();
+  // Ако същият цитат влезе в рамките на 1500ms, блокираме дублирането
+  if (quote === lastProcessedQuote && (now - lastProcessedTime < 1500)) {
+    return;
+  }
+  lastProcessedQuote = quote;
+  lastProcessedTime = now;
+
+  // ПРИНТИРА САМО ВЕДНЪЖ
+  if (typeof appendMessage === "function") {
+    appendMessage(`\n<span style="color: #8c8c8c; font-weight: bold;">[MARVIN AI]: ${quote}</span>\n`, false, false);
+  }
+
+  // ГЛАС
+  if (typeof playMarvinVoice === "function") {
+    playMarvinVoice(quote);
+  }
+
+  // ВИЗУАЛЕН ЕФЕКТ
+  document.body.classList.add("marvin-depression");
+  setTimeout(function() {
+    document.body.classList.remove("marvin-depression");
+  }, 5000);
 }
 
 /* ==========================================================
@@ -495,5 +528,168 @@ function generateStoryMessage(cmd) {
   } catch (e) {
     console.error(e);
     return "Грешка при рендиране на Стори модула.";
+  }
+}
+/* ==========================================================
+   КРИПТИРАНЕ БЕЗ РАЗДУВАНЕ (Съотношение 1:1 - 100 букви = 100 букви)
+========================================================== */
+
+function atmosXorEncode(text, key) {
+  if (!text || !key) return text;
+  let result = "";
+
+  for (let i = 0; i < text.length; i++) {
+    const charCode = text.charCodeAt(i);
+    const keyChar = key.charCodeAt(i % key.length);
+
+    // Правим XOR операция
+    let xorValue = charCode ^ keyChar;
+
+    // ХАК ЗА БЕЗОПАСНОСТ: Ако XOR стойността е в диапазона на невидимите/контролни символи (0-31)
+    // я изместваме нагоре в безопасна зона (например + 0xE000 - Private Use Area на Unicode)
+    // за да може Firebase и браузърът да я прочетат и запишат безпроблемно като единичен символ.
+    if (xorValue < 32) {
+      xorValue += 0xE000;
+    }
+
+    result += String.fromCharCode(xorValue);
+  }
+
+  return result;
+}
+
+function atmosXorDecode(cipherText, key) {
+  if (!cipherText || !key) return cipherText;
+  let result = "";
+
+  for (let i = 0; i < cipherText.length; i++) {
+    let charCode = cipherText.charCodeAt(i);
+    const keyChar = key.charCodeAt(i % key.length);
+
+    // Връщаме обратно от безопасната зона, ако е била изместена
+    if (charCode >= 0xE000 && charCode < 0xE020) {
+      charCode -= 0xE000;
+    }
+
+    // Обратен XOR
+    const originalCharCode = charCode ^ keyChar;
+    result += String.fromCharCode(originalCharCode);
+  }
+
+  return result;
+}
+
+/* ==========================================================
+   CRYPTO SECURITY LAYER (AUTOLOCK & TAB CLOSE)
+========================================================== */
+
+// 1. ЗАЩИТА: При затваряне на сайта, презареждане (F5) или затваряне на таба
+window.addEventListener("beforeunload", function () {
+  // Изчистваме секретния ключ веднага, за да не се пази на диска
+  localStorage.removeItem("crypto_key");
+});
+
+
+// 2. ЗАЩИТА: ТАЙМЕР ЗА 5 МИНУТИ НЕАКТИВНОСТ
+let inactivityTimer;
+const INACTIVITY_LIMIT = 5 * 60 * 1000; // 5 минути в милисекунди
+
+function resetInactivityTimer() {
+  // Изчистваме стария таймер при всяко действие
+  clearTimeout(inactivityTimer);
+  
+  // Стартираме нов таймер
+  inactivityTimer = setTimeout(function() {
+    // Тази логика се изпълнява САМО ако в момента сме в Крипто режим
+    if (window.cryptoModeActive) {
+      
+      // Изчистваме ключа от паметта
+      localStorage.removeItem("crypto_key");
+      
+      // Връщаме нормалното състояние на терминала
+      window.cryptoModeActive = false;
+      document.body.classList.remove("crypto-mode");
+      
+      // Изчистваме екрана и презареждаме нормалния чат
+      document.getElementById("messages").innerHTML = "";
+      if (typeof reloadChatMessages === "function") reloadChatMessages();
+      if (typeof updatePrompt === "function") updatePrompt();
+      
+      // Принтираме системно съобщение за сигурност в терминала (ако съществува)
+      const termOutput = document.getElementById("terminalOutput");
+      if (termOutput) {
+        termOutput.innerHTML += "<br><span style='color: #ff3333;'>[SECURITY ALERT] Session expired due to 5 minutes of inactivity. Crypto key wiped.</span>";
+      }
+    }
+  }, INACTIVITY_LIMIT);
+}
+
+// Следим за активност на потребителя (мърдане на мишка, натискане на клавиш, кликове)
+window.addEventListener("mousemove", resetInactivityTimer);
+window.addEventListener("keydown", resetInactivityTimer);
+window.addEventListener("click", resetInactivityTimer);
+window.addEventListener("touchstart", resetInactivityTimer);
+
+// Стартираме таймера първоначално при зареждане на сайта
+resetInactivityTimer();
+// 3. ЗАЩИТА: При заключване на екрана на телефон/компютър или сменяне на таба
+document.addEventListener("visibilitychange", function () {
+  // Ако табът се скрие (екранът се заключи или смениш приложението) И сме в Крипто режим
+  if (document.hidden && window.cryptoModeActive) {
+    
+    // Унищожаваме ключа на секундата!
+    localStorage.removeItem("crypto_key");
+    
+    // Връщаме в нормален режим за сигурност
+    window.cryptoModeActive = false;
+    document.body.classList.remove("crypto-mode");
+    document.getElementById("messages").innerHTML = "";
+    
+    if (typeof reloadChatMessages === "function") reloadChatMessages();
+    if (typeof updatePrompt === "function") updatePrompt();
+    
+    console.log("[SECURITY] Screen locked or tab hidden. Session wiped.");
+  }
+});
+
+/* ==========================================================
+   МАРВИН ЕФЕКТ: ЧИСТ РОБОТСКИ ГЛАС (АНГЛИЙСКИ)
+========================================================== */
+function playMarvinVoice(text) {
+  if (!window.speechSynthesis) return;
+  
+  try {
+    // Ако енджинът е забил или чака, го отпушваме насила
+    window.speechSynthesis.cancel();
+    
+    const utterance = new SpeechSynthesisUtterance(text);
+    const voices = window.speechSynthesis.getVoices();
+    
+    const enVoice = voices.find(v => v.lang.includes("en-US") || v.lang.includes("en-GB") || v.lang.toLowerCase().includes("en"));
+    
+    if (enVoice) {
+      utterance.voice = enVoice;
+    } else if (voices.length > 0) {
+      utterance.voice = voices[0];
+    }
+    
+    utterance.lang = "en-US";
+    utterance.pitch = 0.3; 
+    utterance.rate = 0.7;  
+    utterance.volume = 1.0;
+    
+    window.speechSynthesis.speak(utterance);
+  } catch (e) {
+    console.log("Marvin voice error: ", e);
+  }
+}
+
+// КРИТИЧНО ЗА АНДРОИД APK: Форсираме браузъра да зареди списъка с гласове на заден план
+if (window.speechSynthesis) {
+  window.speechSynthesis.getVoices();
+  if (window.speechSynthesis.addEventListener) {
+    window.speechSynthesis.addEventListener("voiceschanged", () => {
+      window.speechSynthesis.getVoices();
+    });
   }
 }

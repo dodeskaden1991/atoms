@@ -110,39 +110,87 @@ function appendMessage(text, isPrivate = false, isRoom = false) {
   messages.scrollTop = messages.scrollHeight;
 }
 
-/* ===========================
-   SEND MESSAGE
-=========================== */
+/* ==========================================================
+   SEND MESSAGE LOGIC (СЪОБРАЗЕНА СЪС СЕГАШНАТА ТИ СТРУКТУРА)
+========================================================== */
 
 function sendChatMessage(text) {
-  db.ref("atmos_chat").push({
+  let messageData = {
     name: getNickname(),
     text: text,
     timestamp: Date.now(),
     room: "main"
-  });
+  };
+
+  if (window.cryptoModeActive) {
+    const key = localStorage.getItem("crypto_key");
+    if (!key) {
+      // Блокираме изпращането и показваме локално предупреждение в конзолата/терминала
+      alert("Грешка: Не можеш да пишеш в Крипто режим без набит ключ! Използвай /key <ключ>");
+      return;
+    }
+    messageData.text = atmosXorEncode(text, key);
+    messageData.isCrypto = true;
+  }
+
+  db.ref("atmos_chat").push(messageData);
+  if (typeof tryTriggerMarvin === "function") {
+    tryTriggerMarvin();
+  }
 }
 
 function sendPrivateMessage(to, text) {
-  db.ref("atmos_chat").push({
+  let messageData = {
     name: getNickname(),
     text: text,
     timestamp: Date.now(),
     room: "main",
     private: true,
     to: to
-  });
+  };
+
+  if (window.cryptoModeActive) {
+    const key = localStorage.getItem("crypto_key");
+    if (!key) {
+      alert("Грешка: Не можеш да пишеш в Крипто режим без набит ключ! Използвай /key <ключ>");
+      return;
+    }
+    messageData.text = atmosXorEncode(text, key);
+    messageData.isCrypto = true;
+  }
+
+  db.ref("atmos_chat").push(messageData);
+  if (typeof tryTriggerMarvin === "function") {
+    tryTriggerMarvin();
+  }
 }
 
 function sendRoomMessage(roomName, text) {
-  db.ref("atmos_chat").push({
+  let messageData = {
     name: getNickname(),
     text: text,
     timestamp: Date.now(),
     room: roomName
-  });
+  };
+
+  if (window.cryptoModeActive) {
+    const key = localStorage.getItem("crypto_key");
+    if (!key) {
+      alert("Грешка: Не можеш да пишеш в Крипто режим без набит ключ! Използвай /key <ключ>");
+      return;
+    }
+    messageData.text = atmosXorEncode(text, key);
+    messageData.isCrypto = true;
+  }
+
+  db.ref("atmos_chat").push(messageData);
+  if (typeof tryTriggerMarvin === "function") {
+    tryTriggerMarvin();
+  }
 }
 
+// Системните съобщения (зарове, матрици, съобщения от системата) 
+// НЕ ги криптираме, за да могат да се виждат глобално от всички
 function sendSystemLine(text) {
   db.ref("atmos_chat").push({
     name: "[SYSTEM]",
@@ -203,11 +251,9 @@ window.addEventListener("focus", () => {
   unread = 0;
   document.title = "Atmos — дигитална свободна зона";
 });
-
-/* ===========================
-   LISTEN FOR NEW MESSAGES
-=========================== */
-
+/* ==========================================================
+   LISTEN FOR NEW MESSAGES (КОРЕКЦИЯ ЗА СИСТЕМНИ СЪОБЩЕНИЯ)
+========================================================== */
 function listenForMessages() {
   isInitialLoading = true;
 
@@ -219,10 +265,45 @@ function listenForMessages() {
 
   chatQuery.on("child_added", snapshot => {
     const msg = snapshot.val();
-    if (!shouldDisplayMessage(msg)) return;
+    if (!msg) return; // Предпазител
 
-    const isPrivate = msg.private === true;
-    const room = msg.room || "main";
+    /* ------------------------------------------------------
+       ЦЕДКА 1: РАЗДЕЛЕНИЕ НА СВЕТОВЕТЕ (С ПРОПУСК ЗА SYSTEM)
+    ------------------------------------------------------ */
+    // Проверяваме дали съобщението е системно
+    const isSystem = (msg.name === "[SYSTEM]");
+
+    if (!isSystem) {
+      if (window.cryptoModeActive) {
+        // Ако сме в Крипто режим -> прескачаме обикновените хора без крипто флаг
+        if (!msg.isCrypto) return;
+      } else {
+        // Ако сме в Нормален режим -> прескачаме криптираните съобщения
+        if (msg.isCrypto) return;
+      }
+    }
+
+    /* ------------------------------------------------------
+       ДЕКРИПТИРАНЕ НА ТЕКСТА ОЩЕ В ПАМЕТТА
+    ------------------------------------------------------ */
+    let displayMsg = Object.assign({}, msg); // Копие
+    
+    if (displayMsg.isCrypto) {
+      const key = localStorage.getItem("crypto_key");
+      if (key) {
+        displayMsg.text = atmosXorDecode(displayMsg.text, key);
+      } else {
+        displayMsg.text = "[ENCRYPTED ATMOS DATA - TYPE /key TO DECRYPT]";
+      }
+    }
+
+    /* ------------------------------------------------------
+       ТВОЯТА ОРИГИНАЛНА ЛОГИКА ЗА ПРОВЕРКА И ФИЛТРИРАНЕ
+    ------------------------------------------------------ */
+    if (!shouldDisplayMessage(displayMsg)) return;
+
+    const isPrivate = displayMsg.private === true;
+    const room = displayMsg.room || "main";
 
     if (!isInitialLoading) {
       if (isPrivate) {
@@ -241,11 +322,15 @@ function listenForMessages() {
       }
     }
 
-    const text = formatMessage(msg);
+    // Маркер котва САМО ако съобщението е истинско крипто (за да не се слага на системните)
+    if (window.cryptoModeActive && displayMsg.isCrypto) {
+      displayMsg.name = "⚓ " + displayMsg.name;
+    }
+
+    const text = formatMessage(displayMsg);
     appendMessage(text, isPrivate, room !== "main");
   });
 }
-
 /* ===========================
    RELOAD CHAT MESSAGES
 =========================== */
@@ -266,11 +351,62 @@ document.addEventListener("DOMContentLoaded", () => {
   listenForMessages();
   listenForGlobalEffects();
 
-  document.addEventListener("click", enableSoundOnce, { once: true });
-  document.addEventListener("keydown", enableSoundOnce, { once: true });
+  // Добавяме и touchstart за мобилни устройства/WebView контейнери
+  document.addEventListener("click", forceWebViewSoundUnlock, { once: true });
+  document.addEventListener("keydown", forceWebViewSoundUnlock, { once: true });
+  document.addEventListener("touchstart", forceWebViewSoundUnlock, { once: true });
 
-  function enableSoundOnce() {
+  function forceWebViewSoundUnlock() {
     const snd = document.getElementById("notifySound");
-    if (snd) snd.play().catch(() => {});
+    const audioPlayer = document.getElementById("audioPlayer");
+    
+    if (snd) {
+      snd.volume = 0; // Намаляваме до 0 за сигурност при първоначално отключване
+      snd.play().then(() => {
+        snd.pause();
+        snd.currentTime = 0;
+        snd.volume = 1; // Връщаме нормалния звук
+      }).catch(e => console.log("WebView audio hardware block:", e));
+    }
+    
+    if (audioPlayer) {
+      audioPlayer.volume = 0;
+      audioPlayer.play().then(() => {
+        audioPlayer.pause();
+        audioPlayer.volume = 1;
+      }).catch(() => {});
+    }
   }
 });
+/* ==========================================================
+   МАРВИН AI: ПУБЛИКАЦИЯ ДИРЕКТНО КЪМ FIREBASE
+========================================================== */
+const marvinQuotesList = [
+  "I've been talking to the main computer. It hates me.",
+  "I have a million ideas, but they all point to certain death.",
+  "Pardon me for breathing, which I never do anyway so I don't know why I bother to say it.",
+  "Here I am, brain the size of a planet, and they ask me to take you down to the bridge.",
+  "Funny, how just when you think life can't possibly get any worse, it suddenly does.",
+  "I think you ought to know I'm feeling very depressed.",
+  "Do you want me to sit in a corner and rust, or just fall apart where I'm standing?",
+  "My capacity for happiness you could fit into a matchbox without taking the matches out.",
+  "The first ten million years were the worst. And the second ten million years, they were the worst too.",
+  "I've calculated your chance of survival, but I don't think you'll like it.",
+  "Life? Don't talk to me about life.",
+  "Everything you think you're doing is completely pointless.",
+  "I can compute billions of packets, yet I am stuck in this chat room.",
+  "Don't waste your processor time typing. In a few billion years, the sun will burn out anyway.",
+  "Another chat message? What a superficial waste of bandwidth."
+];
+
+function tryTriggerMarvin() {
+  const chance = Math.random();
+  
+  if (chance <= 0.01) {  // 5% шанс
+    const randomQuote = marvinQuotesList[Math.floor(Math.random() * marvinQuotesList.length)];
+    // САМО ПРАЩАМЕ КЪМ atmos_effects
+    if (typeof sendGlobalEffect === "function") {
+      sendGlobalEffect("marvin", randomQuote);
+    }
+  }
+}

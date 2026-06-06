@@ -248,3 +248,43 @@ body.light footer {
     -webkit-overflow-scrolling: touch;
   }
 }
+/* ==========================================================
+   CRYPTO MODE THEMES (ПЪЛНО ПРЕНАПИСВАНЕ НА ПРОМЕНЛИВИТЕ)
+========================================================== */
+
+/* 1. КРИПТО В ТЪМНА ТЕМА: Изцяло Черно и Бяло (Махаме зеленото) */
+body.dark.crypto-mode {
+  --matrix-bg: #000000 !important;
+  --matrix-text: #ffffff !important;   /* Всички текстове стават бели */
+  --matrix-dim: #888888 !important;    /* Димнатите текстове стават сиви */
+  --border-dark: #ffffff !important;   /* Всички рамки стават бели */
+  background-color: #000000 !important;
+  color: #ffffff !important;
+}
+
+/* Стриктно заковаваме промпта, инпута, аутпута и съобщенията в БЯЛО */
+body.dark.crypto-mode #terminalPrompt,
+body.dark.crypto-mode #terminalInput,
+body.dark.crypto-mode #terminalOutput,
+body.dark.crypto-mode #messages {
+  color: #ffffff !important;
+}
+
+
+/* 2. КРИПТО В СВЕТЛА ТЕМА: Чисто Бяло и Черно (Махаме ретро кремавото) */
+body.light.crypto-mode {
+  --crt-bg: #ffffff !important;        /* Фона става ЧИСТО БЯЛ */
+  --crt-text: #000000 !important;      /* Главният текст става ЧИСТО ЧЕРЕН */
+  --crt-dim: #555555 !important;       /* Димнатият текст става тъмно сив */
+  --border-light: #000000 !important;  /* Рамките стават черни */
+  background-color: #ffffff !important;
+  color: #000000 !important;
+}
+
+/* Стриктно заковаваме промпта, инпута, аутпута и съобщенията в ЧЕРНО */
+body.light.crypto-mode #terminalPrompt,
+body.light.crypto-mode #terminalInput,
+body.light.crypto-mode #terminalOutput,
+body.light.crypto-mode #messages {
+  color: #000000 !important;
+}

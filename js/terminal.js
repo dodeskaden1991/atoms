@@ -140,6 +140,8 @@ RADIO COMMANDS
 TERMINAL COMMANDS
   /theme dark\t\tSwitch to dark theme
   /theme light\t\tSwitch to light theme
+  /swap\t\t\t\tswap between normal and crypto mod
+  /key\t\t\t\tenter the crypto key for decoding
   /generate text\tГенерирай уникално Стори за Instagram/FB
   /clear\t\t\tClear terminal
   /about\t\t\tAbout Atmos
@@ -244,15 +246,27 @@ TERMINAL COMMANDS
     response = "Unmuted all messages.";
   }
 
-  /* ----- NICKNAME ----- */
+/* ----- NICKNAME ----- */
   else if (cmd.startsWith("/nickname")) {
     const parts = cmd.split(" ");
     if (parts.length < 2) response = "Usage: /nickname <newname>";
     else {
       const newNick = parts.slice(1).join(" ");
-      setNickname(newNick);
-      reloadChatMessages();
-      response = `Nickname changed to: ${newNick}`;
+
+      // РЕГЕКС ЗАЩИТА: Позволява само букви (вкл. кирилица), цифри, интервали, тирета и долни черти
+      // Ако има какъвто и да е друг символ (като <, >, /, &, $, @), гърми с грешка
+      const validNickRegex = /^[a-zA-Z0-9а-яА-ЯёЁ\s_\-]+$/;
+
+      if (!validNickRegex.test(newNick)) {
+        response = "Error: Nickname contains invalid characters. Use only letters, numbers, spaces, - or _";
+      } else if (newNick.length > 20) { 
+        // Бонус предпазител: да не си сложат име от 100 символа, което да разтегли интерфейса
+        response = "Error: Nickname is too long. Maximum length is 20 characters.";
+      } else {
+        setNickname(newNick);
+        reloadChatMessages();
+        response = `Nickname changed to: ${newNick}`;
+      }
     }
   }
 
@@ -415,6 +429,54 @@ TERMINAL COMMANDS
           sendRoomMessage(room, text);
           response = `Message sent to room: ${room}`;
         }
+      }
+    }
+  }
+
+  /* ==========================================================
+     КОМАНДА: /swap (Коригирана)
+  ========================================================== */
+  else if (cmd.toLowerCase() === "/swap") {
+    if (typeof window.cryptoModeActive === "undefined") window.cryptoModeActive = false;
+    
+    window.cryptoModeActive = !window.cryptoModeActive;
+
+    if (window.cryptoModeActive) {
+      localStorage.removeItem("crypto_key"); 
+      document.body.classList.add("crypto-mode"); 
+      
+      // ВЕДНАГА презареждаме чата, за да изтегли крипто съобщенията (заключени)
+      if (typeof reloadChatMessages === "function") reloadChatMessages(); 
+      
+      response = ">>> SWAPPED TO CRYPTO MODE. TYPE /key <your_key> TO BEGIN.";
+    } else {
+      localStorage.removeItem("crypto_key"); 
+      document.body.classList.remove("crypto-mode"); 
+      
+      if (typeof reloadChatMessages === "function") reloadChatMessages(); 
+      response = ">>> SWAPPED BACK TO NORMAL CHAT MODE.";
+    }
+    
+    if (typeof updatePrompt === "function") updatePrompt();
+  }
+
+  /* ==========================================================
+     КОМАНДА: /key (Задаване на Ключ - само в Крипто Мод)
+  ========================================================== */
+  else if (cmd.toLowerCase().startsWith("/key")) {
+    // Първо задължителната проверка дали изобщо сме в крипто режим
+    if (!window.cryptoModeActive) {
+      response = "Error: Command /key is only available in CRYPTO MODE. Type /swap first.";
+    } else {
+      // Взимаме всичко след "/key "
+      const inputKey = cmd.substring(5).trim();
+      
+      if (!inputKey) {
+        response = "Usage: /key <your_secret_key>";
+      } else {
+        localStorage.setItem("crypto_key", inputKey); // Набиваме ключа
+        if (typeof reloadChatMessages === "function") reloadChatMessages(); // Рефреш за декриптиране в реално време
+        response = ">>> CRYPTO KEY INJECTED SUCCESSFULLY.";
       }
     }
   }

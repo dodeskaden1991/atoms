@@ -53,7 +53,7 @@
 
   <footer>
     © 2026 Atmos — Свободен чат. Без акаунти. Без следене.<br>
-    <small>Свали Android APK: <a href="https://drive.google.com/file/d/1BBvKb-JOxf6YZw-5dsp81hVEMedSRxHw/view?usp=sharing" target="_blank">ТУК</a></small>
+    <small>Свали Android APK: <a href="https://drive.google.com/file/d/1ERq00DlCwpx7iXKUOyng6DBbzfhR_Qzi/view?usp=drive_link" target="_blank">ТУК</a> Актуализирано приложение - 6.06.26</small>
   </footer>
 
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
@@ -70,6 +70,89 @@
       navigator.serviceWorker.register("/sw.js");
     }
   </script>
+
+  <!-- Android TTS Bridge – за звук в APK (работи заедно с Java кода в MainActivity) -->
+  <script>
+    (function() {
+      // Заменяме playMarvinVoice с версия, която използва AndroidTTS ако е налице
+      let androidTTSPresent = false;
+      
+      // Проверка за Java TTS интерфейс
+      if (typeof AndroidTTS !== 'undefined' && AndroidTTS.isReady && AndroidTTS.isReady()) {
+        androidTTSPresent = true;
+        console.log("[HTML] Android TTS bridge detected");
+      }
+      
+      const originalVoice = window.playMarvinVoice;
+      if (typeof originalVoice === 'function') {
+        window.playMarvinVoice = function(text) {
+          if (androidTTSPresent) {
+            try {
+              AndroidTTS.speak(text);
+              return;
+            } catch(e) {
+              console.warn("[HTML] AndroidTTS failed, fallback to Web Speech", e);
+            }
+          }
+          // Fallback към оригиналния Web Speech
+          originalVoice(text);
+        };
+      }
+      
+      // Ако Android TTS се появи по-късно (след зареждане на страницата),
+      // периодично проверяваме и активираме.
+      const checkInterval = setInterval(function() {
+        if (!androidTTSPresent && typeof AndroidTTS !== 'undefined' && AndroidTTS.isReady && AndroidTTS.isReady()) {
+          androidTTSPresent = true;
+          console.log("[HTML] Android TTS bridge late-detected");
+          clearInterval(checkInterval);
+        }
+      }, 1000);
+      
+      // Спираме интервала след 10 секунди, за да не натоварваме
+      setTimeout(function() { clearInterval(checkInterval); }, 10000);
+    })();
+  </script>
+
+  <script>
+// Отваряне на външни линкове в Capacitor
+(function() {
+    // Функция за отваряне на линк
+    async function openLink(url) {
+        // Проверка дали сме в Capacitor
+        if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) {
+            // Опитваме се да използваме Capacitor Browser
+            try {
+                // Извикваме нативния метод през bridge
+                if (window.Capacitor && window.Capacitor.nativeCallback) {
+                    window.Capacitor.nativeCallback('Browser', 'open', { url: url });
+                } else {
+                    window.open(url, '_system');
+                }
+            } catch(e) {
+                window.open(url, '_blank');
+            }
+        } else {
+            window.open(url, '_blank');
+        }
+    }
+    
+    // Прихващаме всички кликвания върху линкове
+    document.addEventListener('click', function(e) {
+        let target = e.target.closest('a');
+        if (target && target.href) {
+            let href = target.href;
+            // Проверка дали е външен линк
+            if (href.indexOf('atoms.free.bg') === -1 && 
+                href.indexOf('localhost') === -1 &&
+                href.indexOf('atmos') === -1) {
+                e.preventDefault();
+                openLink(href);
+            }
+        }
+    });
+})();
+</script>
 
 </body>
 </html>

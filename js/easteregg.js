@@ -502,7 +502,7 @@ function fortuneMessage(cmd) {
     const month = String(now.getMonth() + 1).padStart(2, '0');
     const year = now.getFullYear();
     const dateStr = `${day}.${month}.${year}`;
-    const fullTerminalText = `[${dateStr}] Късметът: ${f}`;
+    const fullTerminalText = `[${dateStr}] ${f}`;
 
     // РОТАЦИЯ НА ХАКЕРСКИ ЛОКАЦИИ (100% СИНХРОННО И ЛОКАЛНО)
     const fakeLocations = [
