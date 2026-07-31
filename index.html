@@ -1,158 +1,311 @@
 <!DOCTYPE html>
 <html lang="bg">
-
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="title" content="Atmos — дигитална свободна зона">
   <meta name="description" content="Atmos — терминален чат без акаунти, без следене и без алгоритми. Място, където думите тежат повече от шума.">
   <meta name="keywords" content="Atmos, terminal chat, minimal, privacy, freedom, text, digital zone">
   <meta name="author" content="Deyan">
-
   <meta property="og:title" content="Atmos — дигитална свободна зона">
   <meta property="og:description" content="Свободен терминален чат. Без акаунти. Без следене. Без алгоритми.">
   <meta property="og:image" content="https://atoms.free.bg/atmos-preview.jpg">
   <meta property="og:url" content="https://atoms.free.bg/">
   <meta property="og:type" content="website">
-
   <link rel="icon" type="image/png" href="ico.png">
-
   <title>Atmos — дигитална свободна зона</title>
-
-  <link rel="stylesheet" href="css/style.css">
-  <link rel="stylesheet" href="css/effect.css">
+  <link rel="stylesheet" href="css/ui.css">
 </head>
-
-<body class="dark">
-
+<body>
   <audio id="audioPlayer"></audio>
   <audio id="notifySound" src="notify.mp3" preload="auto"></audio>
 
-  <header id="header">
-    <h1>Atmos — дигитална свободна зона.</h1>
-    <p>Тук думите тежат повече от алгоритмите.</p>
-  </header>
-
-  <div id="main">
-
-    <div id="chatWindow">
-      <pre id="messages"></pre>
-    </div>
-
-    <div id="terminalPanel">
-      <div id="terminalOutput">Atmos Terminal v3.14<br>Type /help for commands.</div>
-
-      <div id="terminalLine">
-        <span id="terminalPrompt"></span>
-        <input id="terminalInput" type="text" autocomplete="off" autofocus>
+  <!-- ЛОАДИНГ -->
+  <div id="loadingOverlay">
+    <div style="background:var(--bg-secondary); color:var(--text-primary); padding:30px 40px; border-radius:12px; text-align:center; border:1px solid var(--border-color); max-width:90%;">
+      <h2 style="margin:0 0 12px; color:var(--text-accent);">⏳ Зареждане...</h2>
+      <div style="margin:0; color:var(--text-secondary);">Atmos се синхронизира с базата данни.</div>
+      <div style="margin-top:20px; width:100%; height:4px; background:var(--bg-primary); border-radius:2px; overflow:hidden;">
+        <div style="width:100%; height:100%; background:var(--text-accent);"></div>
       </div>
     </div>
-
   </div>
 
-  <footer>
-    © 2026 Atmos — Свободен чат. Без акаунти. Без следене.<br>
-    <small>Свали Android APK: <a href="https://drive.google.com/file/d/1ERq00DlCwpx7iXKUOyng6DBbzfhR_Qzi/view?usp=drive_link" target="_blank">ТУК</a> Актуализирано приложение - 6.06.26</small>
+  <!-- ХЕДЪР -->
+  <header id="appHeader">
+    <div class="header-left">
+      <h1>Atmos <span class="motto">— дигитална свободна зона. Тук думите тежат повече от алгоритмите.</span></h1>
+    </div>
+  </header>
+
+  <!-- ГЛАВНО МЕНЮ -->
+  <nav id="mainNav">
+    <div class="nav-left">
+      <div id="userArea">
+        <div id="userNick">Anonymous</div>
+        <button id="userNickEdit" title="Смени никнейм">✏️</button>
+      </div>
+    </div>
+    <div class="nav-right">
+      <button id="toggleSidebarBtn" title="Покажи/скрий страничната лента">☰ Меню</button>
+      <div id="clockDisplay">00:00:00</div>
+    </div>
+  </nav>
+
+  <!-- ОСНОВНА ОБЛАСТ -->
+  <div id="appLayout">
+    <!-- СТРАНИЧЕН БАР -->
+    <aside id="sidebar">
+      <section id="roomsSection">
+        <div class="sectionHeader">
+          <div>📡 Стаи</div>
+          <button class="addBtn" id="addRoomBtn" title="Добави стая">+</button>
+        </div>
+        <ul id="roomList"></ul>
+      </section>
+      <section id="contactsSection">
+        <div class="sectionHeader">
+          <div>👤 Контакти</div>
+          <button class="addBtn" id="addContactBtn" title="Добави контакт">+</button>
+        </div>
+        <ul id="contactList"></ul>
+      </section>
+      <section id="functions">
+        <div class="sectionHeader">
+          <div>⚙️ Функции</div>
+        </div>
+        <ul id="functionsList">
+          <li><button id="terminalToggleBtn" title="Отвори терминал">⌨️ Терминал</button></li>
+          <li><button id="switchViewBtn" title="Към класическия интерфейс">🔄 Класически</button></li>
+          <li><button id="themeToggle" title="Превключи тема">🌓 Тема</button></li>
+        </ul>
+      </section>
+      <!-- СЕКЦИЯ ИГРИ -->
+      <!-- СЕКЦИЯ ИГРИ -->
+      <section id="gamesSection">
+        <div class="sectionHeader">
+          <div>🎮 Игри</div>
+        </div>
+        <ul id="gamesList">
+          <li>
+            <button onclick="window.location.href='game1.html'" title="Отвори Sumo Bumpers Arena">
+              🤼 Sumo Bumpers Arena
+            </button>
+          </li>
+          <li>
+            <button onclick="window.location.href='game2.html'" title="Отвори Dynamic Tank Arena">
+              ⚔️ Dynamic Tank Arena
+            </button>
+          </li>
+        </ul>
+      </section>
+    </aside>
+
+    <!-- ЧАТ ОБЛАСТ -->
+    <main id="chatArea">
+      <div id="chatHeader">
+        <div id="currentChatLabel">#main</div>
+        <div id="chatStatus"></div>
+        <div id="cryptoIndicator" style="display:none; margin-left:auto; color:#ff4444; font-weight:bold;">🔐 CRYPTO</div>
+      </div>
+      <div id="messages"></div>
+      <div id="inputArea">
+        <input id="messageInput" type="text" placeholder="Съобщение...">
+        <button id="sendBtn">Изпрати</button>
+      </div>
+    </main>
+  </div>
+
+  <!-- ФУТЪР -->
+  <footer id="appFooter">
+    <div>© 2026 Atmos — Свободен чат. Без акаунти. Без следене.</div>
+    <div style="margin-top:4px;">
+      <small>Свали Android APK: <a href="https://drive.google.com/file/d/1ERq00DlCwpx7iXKUOyng6DBbzfhR_Qzi/view?usp=drive_link" target="_blank">ТУК</a> (актуализирано приложение - 6.06.26)</small>
+    </div>
   </footer>
+
+  <!-- ТЕРМИНАЛ ПОП-ЪП -->
+  <div id="terminalPopup" style="display:none;">
+    <div class="popup-overlay" id="terminalOverlay">
+      <div class="popup-box">
+        <div class="popup-header">
+          <div>⌨️ Atmos Terminal</div>
+          <button id="terminalCloseBtn">✕</button>
+        </div>
+        <div id="terminalOutput">Atmos Terminal v3.14<br>Type /help for commands.</div>
+        <div id="terminalLine">
+          <div id="terminalPrompt"></div>
+          <input id="terminalInput" type="text" autocomplete="off">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- МОДАЛЕН ПРОЗОРЕЦ ЗА ВЪВЕЖДАНЕ -->
+  <div id="customModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:99999; align-items:center; justify-content:center; backdrop-filter:blur(3px);">
+    <div style="background:var(--bg-secondary); border-radius:12px; padding:24px 28px; max-width:400px; width:90%; border:1px solid var(--border-color); box-shadow:0 8px 30px rgba(0,0,0,0.5);">
+      <h3 id="modalTitle" style="margin-top:0; color:var(--text-accent);">Въведете</h3>
+      <input id="modalInput" type="text" style="width:100%; padding:8px 12px; border-radius:6px; border:1px solid var(--border-color); background:var(--bg-primary); color:var(--text-primary); font-family:var(--font); font-size:14px; margin-bottom:16px;">
+      <div style="display:flex; gap:10px; justify-content:flex-end;">
+        <button id="modalCancel" style="padding:8px 16px; border-radius:6px; border:1px solid var(--border-color); background:transparent; color:var(--text-secondary); cursor:pointer; font-family:var(--font);">Отказ</button>
+        <button id="modalConfirm" style="padding:8px 16px; border-radius:6px; border:none; background:var(--text-accent); color:var(--bg-primary); cursor:pointer; font-family:var(--font); font-weight:bold;">Потвърди</button>
+      </div>
+    </div>
+  </div>
 
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-
   <script src="js/chat.js"></script>
   <script src="js/main.js"></script>
   <script src="js/terminal.js"></script>
   <script src="js/fortunes_data.js"></script>
   <script src="js/easteregg.js"></script>
+  <script src="js/ui-modern.js"></script>
+
+  <style>
+    #loadingOverlay { display:flex; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.75); z-index:99998; align-items:center; justify-content:center; backdrop-filter:blur(4px); }
+    #terminalPopup { 
+  display: none; 
+  position: fixed; 
+  top: 0; 
+  left: 0; 
+  right: 0;
+  bottom: 0;
+  width: 100%; 
+  height: 100%; 
+  z-index: 99997; 
+}
+
+.popup-overlay { 
+  display: flex; 
+  align-items: center; 
+  justify-content: center; 
+  width: 100%; 
+  height: 100%; 
+  background: rgba(0,0,0,0.65); 
+  backdrop-filter: blur(3px); 
+  padding: 12px; /* Предотвратява залепване до ръба на мобилни екрани */
+  box-sizing: border-box;
+}
+
+.popup-box { 
+  background: var(--bg-secondary); 
+  border: 1px solid var(--border-color); 
+  border-radius: 12px; 
+  width: 100%; 
+  max-width: 700px; 
+  max-height: 80vh; 
+  display: flex; 
+  flex-direction: column; 
+  overflow: hidden; 
+  box-shadow: 0 12px 40px rgba(0,0,0,0.6); 
+  box-sizing: border-box;
+}
+
+.popup-header { 
+  display: flex; 
+  justify-content: space-between; 
+  align-items: center; 
+  padding: 10px 16px; 
+  background: var(--bg-primary); 
+  border-bottom: 1px solid var(--border-color); 
+  font-weight: bold; 
+  color: var(--text-accent); 
+  flex-shrink: 0; 
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.popup-header button { 
+  background: none; 
+  border: none; 
+  color: var(--text-secondary); 
+  font-size: 22px; 
+  cursor: pointer; 
+  line-height: 1; 
+  padding: 0 6px; 
+}
+.popup-header button:hover { color: #ff4444; }
+
+.popup-box #terminalOutput { 
+  flex: 1; 
+  padding: 12px 16px; 
+  overflow-y: auto; 
+  font-size: 14px; 
+  line-height: 1.6; 
+  white-space: pre-wrap; 
+  word-break: break-word; 
+  background: var(--bg-primary); 
+  color: var(--text-primary); 
+  min-height: 150px; 
+  max-height: 50vh; 
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.popup-box #terminalLine { 
+  display: flex; 
+  align-items: center; 
+  padding: 8px 16px; 
+  background: var(--bg-secondary); 
+  border-top: 1px solid var(--border-color); 
+  flex-shrink: 0; 
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.popup-box #terminalPrompt { 
+  color: var(--text-accent); 
+  font-weight: bold; 
+  margin-right: 8px; 
+  white-space: nowrap; 
+  flex-shrink: 0; /* Гарантира, че промптът няма да свие инпута */
+}
+
+.popup-box #terminalInput { 
+  flex: 1; 
+  min-width: 0; /* КЛЮЧОВО ЗА CHROME: Спира раздуването на Flex контейнери */
+  background: transparent; 
+  border: none; 
+  outline: none; 
+  color: var(--text-primary); 
+  font-family: var(--font); 
+  font-size: 14px; 
+  caret-color: var(--text-accent); 
+}
+    #customModal input { background:var(--bg-primary); color:var(--text-primary); border:1px solid var(--border-color); border-radius:6px; padding:10px 12px; width:100%; font-family:var(--font); font-size:14px; outline:none; }
+    #customModal input:focus { border-color:var(--text-accent); box-shadow:0 0 8px var(--shadow-color); }
+    #customModal button { font-family:var(--font); font-size:14px; padding:8px 18px; border-radius:6px; cursor:pointer; transition:0.2s; }
+    #customModal #modalCancel { background:transparent; border:1px solid var(--border-color); color:var(--text-secondary); }
+    #customModal #modalCancel:hover { background:var(--hover-bg); }
+    #customModal #modalConfirm { background:var(--text-accent); border:none; color:var(--bg-primary); font-weight:bold; }
+    #customModal #modalConfirm:hover { opacity:0.85; }
+  </style>
 
   <script>
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("/sw.js");
-    }
-  </script>
-
-  <!-- Android TTS Bridge – за звук в APK (работи заедно с Java кода в MainActivity) -->
-  <script>
-    (function() {
-      // Заменяме playMarvinVoice с версия, която използва AndroidTTS ако е налице
-      let androidTTSPresent = false;
-      
-      // Проверка за Java TTS интерфейс
-      if (typeof AndroidTTS !== 'undefined' && AndroidTTS.isReady && AndroidTTS.isReady()) {
-        androidTTSPresent = true;
-        console.log("[HTML] Android TTS bridge detected");
-      }
-      
-      const originalVoice = window.playMarvinVoice;
-      if (typeof originalVoice === 'function') {
-        window.playMarvinVoice = function(text) {
-          if (androidTTSPresent) {
-            try {
-              AndroidTTS.speak(text);
-              return;
-            } catch(e) {
-              console.warn("[HTML] AndroidTTS failed, fallback to Web Speech", e);
-            }
-          }
-          // Fallback към оригиналния Web Speech
-          originalVoice(text);
-        };
-      }
-      
-      // Ако Android TTS се появи по-късно (след зареждане на страницата),
-      // периодично проверяваме и активираме.
-      const checkInterval = setInterval(function() {
-        if (!androidTTSPresent && typeof AndroidTTS !== 'undefined' && AndroidTTS.isReady && AndroidTTS.isReady()) {
-          androidTTSPresent = true;
-          console.log("[HTML] Android TTS bridge late-detected");
-          clearInterval(checkInterval);
-        }
-      }, 1000);
-      
-      // Спираме интервала след 10 секунди, за да не натоварваме
-      setTimeout(function() { clearInterval(checkInterval); }, 10000);
-    })();
-  </script>
-
-  <script>
-// Отваряне на външни линкове в Capacitor
-(function() {
-    // Функция за отваряне на линк
+  (function() {
     async function openLink(url) {
-        // Проверка дали сме в Capacitor
-        if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) {
-            // Опитваме се да използваме Capacitor Browser
-            try {
-                // Извикваме нативния метод през bridge
-                if (window.Capacitor && window.Capacitor.nativeCallback) {
-                    window.Capacitor.nativeCallback('Browser', 'open', { url: url });
-                } else {
-                    window.open(url, '_system');
-                }
-            } catch(e) {
-                window.open(url, '_blank');
-            }
-        } else {
-            window.open(url, '_blank');
-        }
+      if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) {
+        try {
+          if (window.Capacitor && window.Capacitor.nativeCallback) {
+            window.Capacitor.nativeCallback('Browser', 'open', { url: url });
+          } else { window.open(url, '_system'); }
+        } catch(e) { window.open(url, '_blank'); }
+      } else { window.open(url, '_blank'); }
     }
     
-    // Прихващаме всички кликвания върху линкове
     document.addEventListener('click', function(e) {
-        let target = e.target.closest('a');
-        if (target && target.href) {
-            let href = target.href;
-            // Проверка дали е външен линк
-            if (href.indexOf('atoms.free.bg') === -1 && 
-                href.indexOf('localhost') === -1 &&
-                href.indexOf('atmos') === -1) {
-                e.preventDefault();
-                openLink(href);
-            }
+      let target = e.target.closest('a');
+      if (target && target.href) {
+        let href = target.href;
+        if (href.indexOf('atoms.free.bg') === -1 && href.indexOf('localhost') === -1 && href.indexOf('atmos') === -1) {
+          e.preventDefault();
+          openLink(href);
         }
+      }
     });
-})();
-</script>
+  })();
+  </script>
 
 </body>
 </html>

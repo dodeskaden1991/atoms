@@ -1,6 +1,6 @@
-/* ===========================
+/* ==========================================================
    FIREBASE CONFIG
-=========================== */
+========================================================== */
 
 const firebaseConfig = {
   apiKey: "AIzaSyAGF9BsM0_OMADMYiTIpIFQ3rlWPQIcP-M",
@@ -16,23 +16,23 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 window.db = firebase.database();
 
-/* ===========================
-   GLOBAL STATE
-=========================== */
+/* ==========================================================
+   GLOBAL STATE & LAZY KEYS
+========================================================== */
 
-let unread = 0;
 let muteMain = false;
 let muteRooms = false;
+window.showMode = "all";
+window.showRoom = null;
 
-let showMode = "all";
-let showRoom = null;
-
-// Флаг, който ни казва дали в момента се зареждат стари съобщения
+window._firstLoadedKey = null; 
+window._lastLoadedKey = null;  
+let isLoadingMore = false;
 let isInitialLoading = true;
 
-/* ===========================
+/* ==========================================================
    ROOMS HELPERS
-=========================== */
+========================================================== */
 
 function getJoinedRooms() {
   try {
@@ -42,28 +42,61 @@ function getJoinedRooms() {
   }
 }
 
-/* ===========================
-   EMOTICON CONVERTER (ОПТИМИЗИРАН)
-=========================== */
+/* ==========================================================
+   SOUND NOTIFICATIONS (САМО ЗВУК)
+========================================================== */
+
+function playNotifySound() {
+  const snd = document.getElementById("notifySound");
+  if (snd) {
+    snd.currentTime = 0;
+    snd.play().catch(() => {});
+  }
+}
+
+function forceWebViewSoundUnlock() {
+  const snd = document.getElementById("notifySound");
+  const audioPlayer = document.getElementById("audioPlayer");
+  
+  if (snd) {
+    snd.volume = 0;
+    snd.play().then(() => {
+      snd.pause();
+      snd.currentTime = 0;
+      snd.volume = 1;
+    }).catch(e => console.log("WebView audio hardware block:", e));
+  }
+  
+  if (audioPlayer) {
+    audioPlayer.volume = 0;
+    audioPlayer.play().then(() => {
+      audioPlayer.pause();
+      audioPlayer.volume = 1;
+    }).catch(() => {});
+  }
+}
+
+/* ==========================================================
+   EMOTICON CONVERTER
+========================================================== */
 
 function convertEmotes(text) {
   const emotes = {
     ";(": "&#128546;", ";-(": "&#128546;", ":(": "&#9785;&#65039;", ":-(": "&#9785;&#65039;",
     ":)": "&#128578;", ":-)": "&#128578;", ":D": "&#128513;", ":-D": "&#128513;",
-    "<3": "&#10084;&#65039;", "&lt;3": "&#10084;&#65039;", // Добавено подсигуряване за ескейпнато сърце
+    "<3": "&#10084;&#65039;", "&lt;3": "&#10084;&#65039;",
     ":P": "&#128539;", ":-P": "&#128539;", ":O": "&#128558;",
     ":-O": "&#128558;", ";)": "&#128521;", ";-)": "&#128521;"
   };
-
   for (const key in emotes) {
     text = text.replaceAll(key, emotes[key]);
   }
   return text;
 }
 
-/* ===========================
-   IRC MESSAGE FORMATTER (КОРИГИРАН)
-=========================== */
+/* ==========================================================
+   IRC MESSAGE FORMATTER & HTML HANDLING
+========================================================== */
 
 function formatMessage(msg) {
   const time = new Date(msg.timestamp).toLocaleTimeString("bg-BG", {
@@ -74,14 +107,16 @@ function formatMessage(msg) {
   let safeName = msg.name ? msg.name : "[SYSTEM]";
   safeName = safeName.replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-  let safeText = msg.text;
-  if (msg.name !== "[SYSTEM]") {
+  let safeText = msg.text || "";
+  const isSystem = (msg.name === "[SYSTEM]");
+  
+  // Проверка за HTML / HTML Инжекция
+  const containsHtml = isSystem && (/<[a-z][\s\S]*>/i.test(safeText) || /<span\s+style/i.test(safeText));
+  
+  if (!containsHtml) {
     safeText = safeText.replace(/</g, "&lt;").replace(/>/g, "&gt;");
   }
 
-  // === КРИТИЧНА КОРЕКЦИЯ: Извикваме конвертора на емотикони тук ===
-  // Тъй като извършваме проверка за '<3', а по-горе сме заменили '<' с '&lt;', 
-  // първо прекарваме текста през convertEmotes и за всеки случай проверяваме и за двата варианта.
   safeText = convertEmotes(safeText);
 
   let roomTag = "";
@@ -92,26 +127,43 @@ function formatMessage(msg) {
   return `[${time}]${roomTag} &lt;${safeName}&gt; ${safeText}`;
 }
 
-/* ===========================
-   DISPLAY MESSAGE
-=========================== */
+/* ==========================================================
+   DISPLAY MESSAGE (IMAGE PARSER & HTML SAFE INJECTION)
+========================================================== */
 
 function appendMessage(text, isPrivate = false, isRoom = false) {
   const messages = document.getElementById("messages");
+  if (!messages) return;
   let line = text;
 
-  if (isPrivate) {
-    line = `<span class="privateMsg">${text}</span>`;
-  } else if (isRoom) {
-    line = `<span class="roomMsg">${text}</span>`;
+  // Автоматично генериране на картинки в стаи и лични съобщения
+  if (isPrivate || isRoom) {
+    if (line.match(/(https?:\/\/.*\.(?:png|jpg|jpeg|gif|webp))/i)) {
+      line = line.replace(/(https?:\/\/.*\.(?:png|jpg|jpeg|gif|webp)(?:\?.*)?)/gi, (url) => {
+        const imgStyle = "max-width:150px;max-height:150px;width:auto;height:auto;object-fit:contain;display:inline-block;vertical-align:middle;cursor:pointer;border:1px solid rgba(0,255,51,0.3);margin:5px 0;";
+        return `<img src="${url}" style="${imgStyle}" onclick="window.openAtmosPopup('${url}')">`;
+      });
+    }
   }
 
-  messages.innerHTML += line + "<br>";
+  let wrapper = document.createElement('span');
+  if (isPrivate) wrapper.classList.add('privateMsg');
+  else if (isRoom) wrapper.classList.add('roomMsg');
+  wrapper.innerHTML = line;
+
+  const hasBlockHtml = /<(div|img|p|h[1-6]|table|ul|ol|blockquote|pre|hr|span\s+style)/i.test(line);
+  if (!hasBlockHtml) {
+    messages.appendChild(wrapper);
+    messages.appendChild(document.createElement('br'));
+  } else {
+    messages.appendChild(wrapper);
+  }
+
   messages.scrollTop = messages.scrollHeight;
 }
 
 /* ==========================================================
-   SEND MESSAGE LOGIC (СЪОБРАЗЕНА СЪС СЕГАШНАТА ТИ СТРУКТУРА)
+   SEND MESSAGE LOGIC WITH MARVIN AI TRIGGER
 ========================================================== */
 
 function sendChatMessage(text) {
@@ -125,7 +177,6 @@ function sendChatMessage(text) {
   if (window.cryptoModeActive) {
     const key = localStorage.getItem("crypto_key");
     if (!key) {
-      // Блокираме изпращането и показваме локално предупреждение в конзолата/терминала
       alert("Грешка: Не можеш да пишеш в Крипто режим без набит ключ! Използвай /key <ключ>");
       return;
     }
@@ -189,8 +240,6 @@ function sendRoomMessage(roomName, text) {
   }
 }
 
-// Системните съобщения (зарове, матрици, съобщения от системата) 
-// НЕ ги криптираме, за да могат да се виждат глобално от всички
 function sendSystemLine(text) {
   db.ref("atmos_chat").push({
     name: "[SYSTEM]",
@@ -200,187 +249,266 @@ function sendSystemLine(text) {
   });
 }
 
-/* ===========================
-   SHOW FILTER
-=========================== */
+/* ==========================================================
+   SHOULD DISPLAY MESSAGE
+========================================================== */
 
 function shouldDisplayMessage(msg) {
   if (!msg) return false;
-
-  const isPrivate = msg.private === true;
+  
+  const isPrivate = (msg.private === true);
   const room = msg.room || "main";
   const myNick = getNickname();
 
-  if (isPrivate) {
-    if (msg.name === myNick || msg.to === myNick) {
-      return true;
-    }
-    return false;
+  if (msg.name === "[SYSTEM]") {
+    if (showMode === "room" || showMode === "private") return false;
   }
 
-  if (showMode === "private") return false;
-  if (showMode === "main" && room !== "main") return false;
-  if (showMode === "room" && room !== showRoom) return false;
+  if (showMode === "private") {
+    if (!isPrivate) return false;
+    
+    const activeContact = window.showRoom; 
+    if (activeContact) {
+      const isFromMeToTarget = (msg.name === myNick && msg.to === activeContact);
+      const isFromTargetToMe = (msg.name === activeContact && msg.to === myNick);
+      return isFromMeToTarget || isFromTargetToMe;
+    }
+    
+    return (msg.name === myNick || msg.to === myNick);
+  }
 
-  if (room !== "main") {
-    const rooms = getJoinedRooms();
-    if (!rooms.includes(room)) return false;
+  if (showMode === "all") {
+    if (isPrivate) {
+      return (msg.name === myNick || msg.to === myNick);
+    }
+    if (room !== "main") {
+      const rooms = getJoinedRooms();
+      if (!rooms.includes(room)) return false;
+    }
+    return true;
+  }
+
+  if (isPrivate) {
+    return false; 
+  }
+
+  if (showMode === "room") {
+    return room === showRoom;
+  }
+
+  if (showMode === "main") {
+    return room === "main";
   }
 
   return true;
 }
 
-/* ===========================
-   SOUND / NOTIFICATIONS
-=========================== */
-
-function playNotifySound() {
-  const snd = document.getElementById("notifySound");
-  if (snd) {
-    snd.currentTime = 0;
-    snd.play().catch(() => {});
-  }
-}
-
-function notifyNewMessage() {
-  unread++;
-  document.title = `(${unread}) Atmos — дигитална свободна зона`;
-}
-
-window.addEventListener("focus", () => {
-  unread = 0;
-  document.title = "Atmos — дигитална свободна зона";
-});
 /* ==========================================================
-   LISTEN FOR NEW MESSAGES (КОРЕКЦИЯ ЗА СИСТЕМНИ СЪОБЩЕНИЯ)
+   PROCESS SINGLE MESSAGE
 ========================================================== */
+
+function processAndFormatMessage(msg) {
+  const isSystem = (msg.name === "[SYSTEM]");
+
+  if (!isSystem) {
+    if (window.cryptoModeActive) {
+      if (!msg.isCrypto) return null;
+    } else {
+      if (msg.isCrypto) return null;
+    }
+  }
+
+  let displayMsg = Object.assign({}, msg);
+  
+  if (displayMsg.isCrypto) {
+    const key = localStorage.getItem("crypto_key");
+    if (key) {
+      displayMsg.text = atmosXorDecode(displayMsg.text, key);
+    } else {
+      displayMsg.text = "[ENCRYPTED ATMOS DATA - TYPE /key TO DECRYPT]";
+    }
+  }
+
+  if (!shouldDisplayMessage(displayMsg)) return null;
+
+  if (window.cryptoModeActive && displayMsg.isCrypto) {
+    displayMsg.name = "⚓ " + displayMsg.name;
+  }
+
+  return {
+    text: formatMessage(displayMsg),
+    isPrivate: displayMsg.private === true,
+    isRoom: (displayMsg.room || "main") !== "main"
+  };
+}
+
+/* ==========================================================
+   LISTEN FOR MESSAGES & PLAY SOUND
+========================================================== */
+
 function listenForMessages() {
   isInitialLoading = true;
+  let queryRef = db.ref("atmos_chat");
 
-  const chatQuery = db.ref("atmos_chat").limitToLast(500);
+  if (showMode === "room" && showRoom) {
+    queryRef = queryRef.orderByChild("room").equalTo(showRoom);
+  } else if (showMode === "main") {
+    queryRef = queryRef.orderByChild("room").equalTo("main");
+  } else {
+    queryRef = queryRef.orderByKey();
+  }
 
-  chatQuery.once("value", () => {
-    isInitialLoading = false;
-  });
+  const chatQuery = queryRef.limitToLast(100);
 
-  chatQuery.on("child_added", snapshot => {
-    const msg = snapshot.val();
-    if (!msg) return; // Предпазител
-
-    /* ------------------------------------------------------
-       ЦЕДКА 1: РАЗДЕЛЕНИЕ НА СВЕТОВЕТЕ (С ПРОПУСК ЗА SYSTEM)
-    ------------------------------------------------------ */
-    // Проверяваме дали съобщението е системно
-    const isSystem = (msg.name === "[SYSTEM]");
-
-    if (!isSystem) {
-      if (window.cryptoModeActive) {
-        // Ако сме в Крипто режим -> прескачаме обикновените хора без крипто флаг
-        if (!msg.isCrypto) return;
-      } else {
-        // Ако сме в Нормален режим -> прескачаме криптираните съобщения
-        if (msg.isCrypto) return;
-      }
-    }
-
-    /* ------------------------------------------------------
-       ДЕКРИПТИРАНЕ НА ТЕКСТА ОЩЕ В ПАМЕТТА
-    ------------------------------------------------------ */
-    let displayMsg = Object.assign({}, msg); // Копие
+  chatQuery.once("value", (snapshot) => {
+    const items = [];
+    snapshot.forEach(child => {
+      items.push({ key: child.key, val: child.val() });
+    });
     
-    if (displayMsg.isCrypto) {
-      const key = localStorage.getItem("crypto_key");
-      if (key) {
-        displayMsg.text = atmosXorDecode(displayMsg.text, key);
-      } else {
-        displayMsg.text = "[ENCRYPTED ATMOS DATA - TYPE /key TO DECRYPT]";
+    items.sort((a, b) => a.key.localeCompare(b.key));
+    
+    items.forEach(item => {
+      const msg = item.val;
+      if (!msg) return;
+      const formatted = processAndFormatMessage(msg);
+      if (formatted) {
+        appendMessage(formatted.text, formatted.isPrivate, formatted.isRoom);
       }
+    });
+    
+    if (items.length > 0) {
+      window._firstLoadedKey = items[0].key;
+      window._lastLoadedKey = items[items.length - 1].key;
     }
 
-    /* ------------------------------------------------------
-       ТВОЯТА ОРИГИНАЛНА ЛОГИКА ЗА ПРОВЕРКА И ФИЛТРИРАНЕ
-    ------------------------------------------------------ */
-    if (!shouldDisplayMessage(displayMsg)) return;
+    const ld = document.getElementById('loadingOverlay');
+    if (ld) ld.style.display = 'none';
+    isInitialLoading = false;
 
-    const isPrivate = displayMsg.private === true;
-    const room = displayMsg.room || "main";
+    // Слушател САМО за НОВИ съобщения
+    let liveRef = db.ref("atmos_chat").orderByKey();
+    if (window._lastLoadedKey) {
+      liveRef = liveRef.startAfter(window._lastLoadedKey);
+    }
 
-    if (!isInitialLoading) {
-      if (isPrivate) {
-        notifyNewMessage();
-        playNotifySound();
-      } else if (room === "main") {
-        if (!muteMain && document.hidden) {
-          notifyNewMessage();
+    liveRef.on("child_added", function(snapshot) {
+      if (snapshot.key === window._lastLoadedKey) return;
+
+      const msg = snapshot.val();
+      if (!msg) return;
+      
+      window._lastLoadedKey = snapshot.key;
+      const formatted = processAndFormatMessage(msg);
+      if (formatted) {
+        appendMessage(formatted.text, formatted.isPrivate, formatted.isRoom);
+        
+        // Звуков сигнал само при входящи нови съобщения в реално време
+        if (!isInitialLoading) {
           playNotifySound();
         }
-      } else {
-        if (!muteRooms && document.hidden) {
-          notifyNewMessage();
-          playNotifySound();
-        }
       }
-    }
-
-    // Маркер котва САМО ако съобщението е истинско крипто (за да не се слага на системните)
-    if (window.cryptoModeActive && displayMsg.isCrypto) {
-      displayMsg.name = "⚓ " + displayMsg.name;
-    }
-
-    const text = formatMessage(displayMsg);
-    appendMessage(text, isPrivate, room !== "main");
+    });
   });
 }
-/* ===========================
-   RELOAD CHAT MESSAGES
-=========================== */
+
+/* ==========================================================
+   LOAD MORE MESSAGES (SCROLL PAGINATION)
+========================================================== */
+
+function loadMoreMessages() {
+  if (isLoadingMore || !window._firstLoadedKey) return;
+  isLoadingMore = true;
+
+  const messagesBox = document.getElementById("messages");
+  if (!messagesBox) {
+    isLoadingMore = false;
+    return;
+  }
+  
+  const oldScrollHeight = messagesBox.scrollHeight;
+
+  let queryRef = db.ref("atmos_chat");
+  
+  if (showMode === "room" && showRoom) {
+    queryRef = queryRef.orderByChild("room").equalTo(showRoom);
+  } else if (showMode === "main") {
+    queryRef = queryRef.orderByChild("room").equalTo("main");
+  } else {
+    queryRef = queryRef.orderByKey();
+  }
+
+  queryRef
+    .endBefore(window._firstLoadedKey)
+    .limitToLast(50)
+    .once("value", (snapshot) => {
+      const items = [];
+      snapshot.forEach(child => {
+        items.push({ key: child.key, val: child.val() });
+      });
+
+      if (items.length === 0) {
+        isLoadingMore = false;
+        return;
+      }
+
+      items.sort((a, b) => a.key.localeCompare(b.key));
+      window._firstLoadedKey = items[0].key;
+
+      const fragment = document.createDocumentFragment();
+
+      items.forEach(item => {
+        const msg = item.val;
+        if (!msg) return;
+        const formatted = processAndFormatMessage(msg);
+        if (formatted) {
+          let wrapper = document.createElement('span');
+          if (formatted.isPrivate) wrapper.classList.add('privateMsg');
+          else if (formatted.isRoom) wrapper.classList.add('roomMsg');
+          
+          let line = formatted.text;
+          if (formatted.isPrivate || formatted.isRoom) {
+            if (line.match(/(https?:\/\/.*\.(?:png|jpg|jpeg|gif|webp))/i)) {
+              line = line.replace(/(https?:\/\/.*\.(?:png|jpg|jpeg|gif|webp)(?:\?.*)?)/gi, (url) => {
+                const imgStyle = "max-width:150px;max-height:150px;width:auto;height:auto;object-fit:contain;display:inline-block;vertical-align:middle;cursor:pointer;border:1px solid rgba(0,255,51,0.3);margin:5px 0;";
+                return `<img src="${url}" style="${imgStyle}" onclick="window.openAtmosPopup('${url}')">`;
+              });
+            }
+          }
+          
+          wrapper.innerHTML = line;
+          fragment.appendChild(wrapper);
+          
+          const hasBlockHtml = /<(div|img|p|h[1-6]|table|ul|ol|blockquote|pre|hr|span\s+style)/i.test(line);
+          if (!hasBlockHtml) {
+            fragment.appendChild(document.createElement('br'));
+          }
+        }
+      });
+
+      messagesBox.insertBefore(fragment, messagesBox.firstChild);
+      messagesBox.scrollTop = messagesBox.scrollHeight - oldScrollHeight;
+      isLoadingMore = false;
+    });
+}
+
+/* ==========================================================
+   RELOAD CHAT
+========================================================== */
 
 function reloadChatMessages() {
   const messagesBox = document.getElementById("messages");
-  messagesBox.innerHTML = "";
-
+  if (messagesBox) messagesBox.innerHTML = "";
   db.ref("atmos_chat").off("child_added");
+  window._firstLoadedKey = null;
+  window._lastLoadedKey = null;
   listenForMessages();
 }
 
-/* ===========================
-   INIT
-=========================== */
-
-document.addEventListener("DOMContentLoaded", () => {
-  listenForMessages();
-  listenForGlobalEffects();
-
-  // Добавяме и touchstart за мобилни устройства/WebView контейнери
-  document.addEventListener("click", forceWebViewSoundUnlock, { once: true });
-  document.addEventListener("keydown", forceWebViewSoundUnlock, { once: true });
-  document.addEventListener("touchstart", forceWebViewSoundUnlock, { once: true });
-
-  function forceWebViewSoundUnlock() {
-    const snd = document.getElementById("notifySound");
-    const audioPlayer = document.getElementById("audioPlayer");
-    
-    if (snd) {
-      snd.volume = 0; // Намаляваме до 0 за сигурност при първоначално отключване
-      snd.play().then(() => {
-        snd.pause();
-        snd.currentTime = 0;
-        snd.volume = 1; // Връщаме нормалния звук
-      }).catch(e => console.log("WebView audio hardware block:", e));
-    }
-    
-    if (audioPlayer) {
-      audioPlayer.volume = 0;
-      audioPlayer.play().then(() => {
-        audioPlayer.pause();
-        audioPlayer.volume = 1;
-      }).catch(() => {});
-    }
-  }
-});
 /* ==========================================================
-   МАРВИН AI: ПУБЛИКАЦИЯ ДИРЕКТНО КЪМ FIREBASE
+   MARVIN AI LOGIC
 ========================================================== */
+
 const marvinQuotesList = [
   "I've been talking to the main computer. It hates me.",
   "I have a million ideas, but they all point to certain death.",
@@ -401,12 +529,66 @@ const marvinQuotesList = [
 
 function tryTriggerMarvin() {
   const chance = Math.random();
-  
-  if (chance <= 0.01) {  // 5% шанс
+  if (chance <= 0.05) {
     const randomQuote = marvinQuotesList[Math.floor(Math.random() * marvinQuotesList.length)];
-    // САМО ПРАЩАМЕ КЪМ atmos_effects
     if (typeof sendGlobalEffect === "function") {
       sendGlobalEffect("marvin", randomQuote);
     }
   }
 }
+
+/* ==========================================================
+   INIT & EVENT LISTENERS
+========================================================== */
+
+document.addEventListener("DOMContentLoaded", () => {
+  listenForMessages();
+  if (typeof listenForGlobalEffects === "function") {
+    listenForGlobalEffects();
+  }
+
+  document.addEventListener("click", forceWebViewSoundUnlock, { once: true });
+  document.addEventListener("keydown", forceWebViewSoundUnlock, { once: true });
+  document.addEventListener("touchstart", forceWebViewSoundUnlock, { once: true });
+
+  const messagesBox = document.getElementById("messages");
+  if (messagesBox) {
+    messagesBox.addEventListener("scroll", () => {
+      if (messagesBox.scrollTop < 60) {
+        loadMoreMessages();
+      }
+    });
+  }
+});
+
+/* ==========================================================
+   POP UP PICS
+========================================================== */
+
+window.openAtmosPopup = function(src) {
+  const overlay = document.createElement('div');
+  overlay.style.position = 'fixed';
+  overlay.style.top = '0'; overlay.style.left = '0';
+  overlay.style.width = '100vw'; overlay.style.height = '100vh';
+  overlay.style.backgroundColor = 'rgba(0,0,0,0.85)';
+  overlay.style.zIndex = '99999';
+  overlay.style.display = 'flex';
+  overlay.style.justifyContent = 'center';
+  overlay.style.alignItems = 'center';
+  overlay.style.cursor = 'zoom-out';
+  
+  const bigImg = document.createElement('img');
+  bigImg.src = src;
+  bigImg.style.maxWidth = '90vw';
+  bigImg.style.maxHeight = '90vh';
+  bigImg.style.objectFit = 'contain';
+  bigImg.style.border = '2px solid #00ff33';
+  bigImg.style.boxShadow = '0 0 20px #00ff33';
+  bigImg.style.cursor = 'default';
+  
+  bigImg.onclick = (e) => e.stopPropagation();
+  overlay.onclick = () => overlay.remove();
+  
+  overlay.appendChild(bigImg);
+  document.body.appendChild(overlay);
+};

@@ -32,7 +32,6 @@ function updatePrompt() {
   const prompt = document.getElementById("terminalPrompt");
   if (!prompt) return;
 
-  // Четем поднивото от localStorage
   let mode = JSON.parse(localStorage.getItem("atmos_mode")) || { isActive: false, type: "", target: "" };
   let promptText = `${nick}@atmos:~$ `;
 
@@ -98,13 +97,32 @@ function pauseMusic() {
 }
 
 /* ==========================================================
-   INIT
+   INIT & AUDIO UNLOCK FOR WEBVIEW
 ========================================================== */
+
+let audioUnlocked = false;
+
+function unlockWebViewAudio() {
+  if (audioUnlocked) return;
+  
+  if (window.speechSynthesis) {
+    const dummy = new SpeechSynthesisUtterance("");
+    dummy.volume = 0;
+    window.speechSynthesis.speak(dummy);
+  }
+  
+  audioUnlocked = true;
+  document.removeEventListener("touchstart", unlockWebViewAudio);
+  document.removeEventListener("click", unlockWebViewAudio);
+}
 
 function initAtmos() {
   applySavedTheme();
   updatePrompt();
-  listenForGlobalEffects(); // Инициализира се ЕДНОКРАТНО тук
+  listenForGlobalEffects();
+  
+  document.addEventListener("touchstart", unlockWebViewAudio);
+  document.addEventListener("click", unlockWebViewAudio);
 }
 
 document.addEventListener("DOMContentLoaded", initAtmos);
@@ -114,6 +132,7 @@ document.addEventListener("DOMContentLoaded", initAtmos);
 ========================================================== */
 
 function sendGlobalEffect(name, payload = null) {
+  if (typeof db === "undefined") return;
   db.ref("atmos_effects").push({
     name: name,
     payload: payload,
@@ -122,7 +141,7 @@ function sendGlobalEffect(name, payload = null) {
 }
 
 function listenForGlobalEffects() {
-  
+  if (typeof db === "undefined") return;
   db.ref("atmos_effects")
     .limitToLast(1)
     .on("child_added", snapshot => {
@@ -139,19 +158,15 @@ function triggerEffect(name, payload) {
     case "matrix":
       triggerMatrixRain();
       break;
-
     case "glitch":
       triggerGlitchOverlay();
       break;
-
     case "kick":
       triggerKickPopup(payload);
       break;
-
     case "hack":
       triggerHackPopup(payload);
       break;
-
     case "marvin":
       triggerMarvinDepression(payload);
       break;
@@ -159,36 +174,133 @@ function triggerEffect(name, payload) {
 }
 
 /* ==========================================================
-   MARVIN DEPRESSION
+   MARVIN DEPRESSION & VOICE ENGINE (WEBVIEW HYBRID)
 ========================================================== */
 
 let lastProcessedQuote = "";
 let lastProcessedTime = 0;
 
 function triggerMarvinDepression(quote) {
-  const now = Date.now();
-  // Ако същият цитат влезе в рамките на 1500ms, блокираме дублирането
-  if (quote === lastProcessedQuote && (now - lastProcessedTime < 1500)) {
-    return;
-  }
-  lastProcessedQuote = quote;
-  lastProcessedTime = now;
+    const now = Date.now();
+    if (quote === lastProcessedQuote && (now - lastProcessedTime < 1500)) {
+        return;
+    }
+    lastProcessedQuote = quote;
+    lastProcessedTime = now;
 
-  // ПРИНТИРА САМО ВЕДНЪЖ
-  if (typeof appendMessage === "function") {
-    appendMessage(`\n<span style="color: #8c8c8c; font-weight: bold;">[MARVIN AI]: ${quote}</span>\n`, false, false);
-  }
+    if (typeof appendMessage === "function") {
+        appendMessage(`\n<span style="color: #8c8c8c; font-weight: bold;">[MARVIN AI]: ${quote}</span>\n`, false, false);
+    }
 
-  // ГЛАС
-  if (typeof playMarvinVoice === "function") {
-    playMarvinVoice(quote);
-  }
+    speakMarvinQuote(quote);
 
-  // ВИЗУАЛЕН ЕФЕКТ
-  document.body.classList.add("marvin-depression");
-  setTimeout(function() {
-    document.body.classList.remove("marvin-depression");
-  }, 5000);
+    document.body.classList.add("marvin-depression");
+    setTimeout(function() {
+        document.body.classList.remove("marvin-depression");
+    }, 5000);
+}
+
+async function speakMarvinQuote(quote) {
+    try {
+        if (window.speechSynthesis) {
+            window.speechSynthesis.cancel();
+            let voices = window.speechSynthesis.getVoices();
+            
+            if (!voices || voices.length === 0) {
+                await new Promise((resolve) => {
+                    let attempts = 0;
+                    const interval = setInterval(() => {
+                        voices = window.speechSynthesis.getVoices();
+                        attempts++;
+                        if ((voices && voices.length > 0) || attempts > 10) {
+                            clearInterval(interval);
+                            resolve();
+                        }
+                    }, 100);
+                });
+            }
+            
+            if (voices && voices.length > 0) {
+                const utterance = new SpeechSynthesisUtterance(quote);
+                utterance.lang = 'en-US';
+                utterance.pitch = 0.3;
+                utterance.rate = 0.7;
+                utterance.volume = 1;
+                
+                const googleVoice = voices.find(v => 
+                    v.name && (v.name.toLowerCase().includes('google') || v.lang.startsWith('en'))
+                );
+                if (googleVoice) utterance.voice = googleVoice;
+                
+                window.speechSynthesis.speak(utterance);
+                return;
+            }
+        }
+        
+        if (typeof responsiveVoice === 'undefined') {
+            await loadResponsiveVoice(quote);
+        }
+        
+        if (typeof responsiveVoice !== 'undefined') {
+            responsiveVoice.speak(quote, "UK English Male", { rate: 0.8, pitch: 0.5, volume: 1 });
+        } else {
+            loadFallbackVoice(quote);
+        }
+        
+    } catch(e) {
+        console.log("[MARVIN] Voice Error:", e);
+        loadFallbackVoice(quote);
+    }
+}
+
+function loadResponsiveVoice(quote) {
+    return new Promise((resolve) => {
+        const script = document.createElement('script');
+        script.src = 'https://code.responsivevoice.org/responsivevoice.js?key=7VrJN4OW';
+        script.onload = () => setTimeout(resolve, 500);
+        script.onerror = () => {
+            if (quote) loadFallbackVoice(quote);
+            resolve();
+        };
+        document.head.appendChild(script);
+    });
+}
+
+function loadFallbackVoice(quote) {
+    try {
+        const audio = document.createElement('audio');
+        audio.style.display = 'none';
+        document.body.appendChild(audio);
+        
+        const encodedText = encodeURIComponent(quote);
+        audio.src = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodedText}&tl=en&client=tw-ob`;
+        
+        audio.play().catch(() => tryFallbackSpeech(quote));
+        audio.onended = () => audio.remove();
+    } catch(e) {
+        tryFallbackSpeech(quote);
+    }
+}
+
+function tryFallbackSpeech(quote) {
+    if (window.speechSynthesis) {
+        try {
+            const utterance = new SpeechSynthesisUtterance(quote);
+            utterance.lang = 'en-US';
+            utterance.pitch = 0.3;
+            utterance.rate = 0.7;
+            window.speechSynthesis.speak(utterance);
+        } catch(e) {}
+    }
+}
+
+if (window.speechSynthesis) {
+  window.speechSynthesis.getVoices();
+  if (window.speechSynthesis.addEventListener) {
+    window.speechSynthesis.addEventListener("voiceschanged", () => {
+      window.speechSynthesis.getVoices();
+    });
+  }
 }
 
 /* ==========================================================
@@ -244,58 +356,148 @@ function triggerMatrixRain() {
 }
 
 /* ==========================================================
-   GLITCH OVERLAY
+   GLITCH & POPUPS
+========================================================== */
+
+/* ==========================================================
+   GLITCH & POPUPS (ФИКС ЗА МОДЕРЕН UI)
 ========================================================== */
 
 function triggerGlitchOverlay() {
+  // Премахваме стар overlay ако има
+  const old = document.querySelector('.glitchOverlay');
+  if (old) old.remove();
+  
   const overlay = document.createElement("div");
   overlay.className = "glitchOverlay";
+  overlay.style.position = "fixed";
+  overlay.style.top = "0";
+  overlay.style.left = "0";
+  overlay.style.width = "100vw";
+  overlay.style.height = "100vh";
+  overlay.style.zIndex = "999999";
+  overlay.style.pointerEvents = "none";
+  overlay.style.animation = "glitchFlash 0.6s ease-out";
   document.body.appendChild(overlay);
 
-  setTimeout(() => overlay.remove(), 600);
+  setTimeout(() => {
+    if (overlay && overlay.parentNode) overlay.remove();
+  }, 700);
 }
 
-/* ==========================================================
-   KICK POPUP
-========================================================== */
-
 function triggerKickPopup(target) {
-  if (getNickname().toLowerCase() !== target.toLowerCase()) return;
+  const myNick = typeof getNickname === 'function' ? getNickname() : '';
+  if (myNick.toLowerCase() !== target.toLowerCase()) {
+    // Ако не сме ние, показваме системно съобщение в чата
+    if (typeof appendMessage === 'function') {
+      appendMessage(`[SYSTEM] ${target} беше изритнат! 👢`, false, false);
+    }
+    return;
+  }
+
+  // Премахваме стар popup ако има
+  const old = document.querySelector('.kickPopup');
+  if (old) old.remove();
 
   const popup = document.createElement("div");
   popup.className = "kickPopup";
-  popup.textContent = "YOU WERE KICKED!";
+  popup.textContent = "👢 YOU WERE KICKED!";
+  popup.style.position = "fixed";
+  popup.style.top = "50%";
+  popup.style.left = "50%";
+  popup.style.transform = "translate(-50%, -50%) scale(0)";
+  popup.style.zIndex = "999999";
+  popup.style.fontSize = "clamp(2rem, 6vw, 4rem)";
+  popup.style.fontWeight = "900";
+  popup.style.textAlign = "center";
+  popup.style.padding = "30px 50px";
+  popup.style.borderRadius = "16px";
+  popup.style.color = "#ff4444";
+  popup.style.background = "rgba(0,0,0,0.85)";
+  popup.style.border = "4px solid #ff4444";
+  popup.style.boxShadow = "0 0 60px rgba(255,68,68,0.5)";
+  popup.style.animation = "popupBoom 2.5s ease-out forwards";
+  popup.style.pointerEvents = "none";
   document.body.appendChild(popup);
 
-  setTimeout(() => popup.remove(), 2000);
+  setTimeout(() => {
+    if (popup && popup.parentNode) popup.remove();
+  }, 2600);
 }
 
-/* ==========================================================
-   HACK POPUP
-========================================================== */
-
 function triggerHackPopup(target) {
-  if (getNickname().toLowerCase() !== target.toLowerCase()) return;
+  const myNick = typeof getNickname === 'function' ? getNickname() : '';
+  if (myNick.toLowerCase() !== target.toLowerCase()) {
+    if (typeof appendMessage === 'function') {
+      appendMessage(`[SYSTEM] ${target} беше хакнат! 💻`, false, false);
+    }
+    return;
+  }
+
+  const old = document.querySelector('.hackPopup');
+  if (old) old.remove();
 
   const popup = document.createElement("div");
   popup.className = "hackPopup";
-  popup.textContent = "HACKED";
+  popup.textContent = "💻 HACKED!";
+  popup.style.position = "fixed";
+  popup.style.top = "50%";
+  popup.style.left = "50%";
+  popup.style.transform = "translate(-50%, -50%) scale(0)";
+  popup.style.zIndex = "999999";
+  popup.style.fontSize = "clamp(2rem, 6vw, 4rem)";
+  popup.style.fontWeight = "900";
+  popup.style.textAlign = "center";
+  popup.style.padding = "30px 50px";
+  popup.style.borderRadius = "16px";
+  popup.style.color = "#00ff44";
+  popup.style.background = "rgba(0,0,0,0.85)";
+  popup.style.border = "4px solid #00ff44";
+  popup.style.boxShadow = "0 0 60px rgba(0,255,68,0.5)";
+  popup.style.animation = "popupBoom 2.5s ease-out forwards";
+  popup.style.pointerEvents = "none";
   document.body.appendChild(popup);
 
-  setTimeout(() => popup.remove(), 1500);
+  setTimeout(() => {
+    if (popup && popup.parentNode) popup.remove();
+  }, 2600);
 }
 
-/* ==========================================================
-   SECRET FLASH
-========================================================== */
+// Добавяме и анимацията динамично, ако липсва в CSS
+(function ensurePopupAnimations() {
+  if (!document.getElementById('popupAnimations')) {
+    const style = document.createElement('style');
+    style.id = 'popupAnimations';
+    style.textContent = `
+      @keyframes popupBoom {
+        0% { transform: translate(-50%, -50%) scale(0); opacity: 0; }
+        15% { transform: translate(-50%, -50%) scale(1.5); opacity: 1; }
+        30% { transform: translate(-50%, -50%) scale(0.85); opacity: 1; }
+        45% { transform: translate(-50%, -50%) scale(1.15); opacity: 1; }
+        60% { transform: translate(-50%, -50%) scale(0.95); opacity: 1; }
+        75% { transform: translate(-50%, -50%) scale(1.05); opacity: 1; }
+        90% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+        100% { transform: translate(-50%, -50%) scale(1); opacity: 0; }
+      }
+      @keyframes glitchFlash {
+        0% { background: rgba(0, 255, 0, 0.9); }
+        8% { background: rgba(255, 0, 0, 0.9); }
+        16% { background: rgba(0, 0, 255, 0.9); }
+        25% { background: rgba(255, 255, 0, 0.9); }
+        33% { background: rgba(0, 0, 0, 0.95); }
+        41% { background: rgba(255, 0, 255, 0.9); }
+        50% { background: rgba(0, 0, 0, 0.95); }
+        58% { background: rgba(0, 255, 0, 0.6); }
+        66% { background: rgba(255, 0, 0, 0.6); }
+        75% { background: rgba(0, 0, 0, 0.95); }
+        85% { background: rgba(0, 255, 255, 0.3); }
+        100% { background: rgba(0, 0, 0, 0); }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+})();
 
-function triggerSecretFlash() {
-  const flash = document.createElement("div");
-  flash.className = "secretFlash";
-  document.body.appendChild(flash);
-
-  setTimeout(() => flash.remove(), 800);
-}
 /* ===================================================================
    ATMOS TERMINAL // GLOBAL STORY GENERATOR ENGINE (v1.2 - ALIGNED)
 =================================================================== */
@@ -304,11 +506,9 @@ function generateStoryMessage(cmd) {
   if (!cmd) cmd = "/generate";
   const parts = cmd.trim().split(/\s+/);
   
-  // Вземаме целия текст след командата
   const textStartIndex = cmd.indexOf(parts[1]);
   let userText = textStartIndex !== -1 ? cmd.substring(textStartIndex).trim() : "";
 
-  // Ако няма подаден текст, слагаме красив placeholder
   if (!userText || userText.toLowerCase() === "text") {
     userText = "Създавай неща, които те карат да забравиш за телефона си.";
   }
@@ -319,7 +519,6 @@ function generateStoryMessage(cmd) {
   const year = now.getFullYear();
   const dateStr = `${day}.${month}.${year}`;
 
-  // 1. ДИНАМИЧНА РОТАЦИЯ НА СТИЛОВЕ (16 СТИЛА - СИНХРОНИЗИРАНИ С DOWNLOAD.HTML)
   const stylesPool = [
     { name: "CYBER_SUNSET", bgGradient: ["#f9d423", "#ff4e50", "#f857a6"], textColor: "#ffffff", accentColor: "#f857a6", subTextColor: "rgba(255, 255, 255, 0.4)", borderColor: "rgba(255, 255, 255, 0.2)", fontFamily: "sans-serif", decorations: "circle" },
     { name: "AURORA_CHILL", bgGradient: ["#00c6ff", "#0072ff", "#130cb7"], textColor: "#ffffff", accentColor: "#00f6ff", subTextColor: "rgba(255, 255, 255, 0.5)", borderColor: "rgba(0, 246, 255, 0.25)", fontFamily: "monospace", decorations: "cross" },
@@ -341,29 +540,20 @@ function generateStoryMessage(cmd) {
 
   const styleIndex = Math.floor(Math.random() * stylesPool.length);
   const activeStyle = stylesPool[styleIndex];
-
-  // Детекцията за мобилно устройство
   const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
-  // 2. Инициализиране на Стори Canvas (Формат 1080x1920 за Story)
   const canvas = document.createElement("canvas");
   const ctx = canvas.getContext("2d");
   canvas.width = 1080; 
   canvas.height = 1920;
 
-  // Изчертаване на линеен градиент за фона
   const bgGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
   bgGrad.addColorStop(0, activeStyle.bgGradient[0]);
   bgGrad.addColorStop(0.5, activeStyle.bgGradient[1]);
-  if (activeStyle.bgGradient[2]) {
-    bgGrad.addColorStop(1, activeStyle.bgGradient[2]);
-  } else {
-    bgGrad.addColorStop(1, activeStyle.bgGradient[1]);
-  }
+  bgGrad.addColorStop(1, activeStyle.bgGradient[2] || activeStyle.bgGradient[1]);
   ctx.fillStyle = bgGrad;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // Добавяне на фина noise/grain текстура
   ctx.fillStyle = "rgba(255, 255, 255, 0.015)";
   for (let i = 0; i < 80000; i++) {
     const rx = Math.random() * canvas.width;
@@ -371,7 +561,6 @@ function generateStoryMessage(cmd) {
     ctx.fillRect(rx, ry, 2, 2);
   }
 
-  // 3. ДЕКОРАТИВНИ ЕЛЕМЕНТИ
   if (activeStyle.decorations === "circle") {
     ctx.strokeStyle = "rgba(255, 255, 255, 0.1)"; ctx.lineWidth = 4;
     ctx.beginPath(); ctx.arc(canvas.width / 2, canvas.height / 2, 400, 0, Math.PI * 2); ctx.stroke();
@@ -388,7 +577,6 @@ function generateStoryMessage(cmd) {
     }
   }
 
-  // Естетическа централна рамка (Стъклен ефект зад контента)
   ctx.fillStyle = "rgba(0, 0, 0, 0.25)";
   ctx.strokeStyle = activeStyle.borderColor;
   ctx.lineWidth = 2;
@@ -396,11 +584,9 @@ function generateStoryMessage(cmd) {
   ctx.fillRect(boxX, boxY, boxW, boxH);
   ctx.strokeRect(boxX, boxY, boxW, boxH);
 
-  // Глобална конфигурация за подравняване на текстовете
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
 
-  // 4. ТЕКСТОВЕ: ХЕДЪР
   ctx.fillStyle = activeStyle.textColor;
   ctx.font = `bold 32px ${activeStyle.fontFamily}`;
   ctx.fillText("▲ ATMOS ENGINE // DISCOVERED", canvas.width / 2, 250);
@@ -409,12 +595,10 @@ function generateStoryMessage(cmd) {
   ctx.font = `18px monospace`;
   ctx.fillText(`GEN_ID: ST_${Date.now().toString().substring(6)} // THEME: ${activeStyle.name}`, canvas.width / 2, 290);
 
-  // Кавички
   ctx.fillStyle = activeStyle.accentColor;
   ctx.font = `bold 120px ${activeStyle.fontFamily}`;
   ctx.fillText("“", canvas.width / 2, 380); 
 
-  // 5. ДИНАМИЧНО ПРЕНАСЯНЕ НА ПОТРЕБИТЕЛСКИЯ ТЕКСТ (ГЕОМЕТРИЧНО ЦЕНТРИРАН)
   ctx.fillStyle = activeStyle.textColor;
   ctx.font = `bold 52px ${activeStyle.fontFamily}`;
   
@@ -436,18 +620,14 @@ function generateStoryMessage(cmd) {
 
   const lineHeight = 75;
   const totalTextHeight = lines.length * lineHeight;
-  
-  // Математически точен център на кутията спрямо middle подравняване
   let startY = (boxY + (boxH / 2)) - (totalTextHeight / 2) + (lineHeight / 2);
 
   for (let i = 0; i < lines.length; i++) {
     ctx.fillText(lines[i], canvas.width / 2, startY + (i * lineHeight));
   }
 
-  // Временно превключваме за футъра, където текстовете нямат нужда от middle подравняване
   ctx.textBaseline = "alphabetic";
 
-  // 6. ФУТЪР НА КАРТАТА
   ctx.fillStyle = activeStyle.subTextColor;
   ctx.font = `24px monospace`;
   ctx.fillText(`DATE: ${dateStr}`, canvas.width / 2, boxY + boxH - 120);
@@ -463,66 +643,68 @@ function generateStoryMessage(cmd) {
   try {
     const imageBase64 = canvas.toDataURL("image/png");
     const output = document.getElementById("terminalOutput") || document.body;
-    
-    const fbShareUrl = isMobile ? "https://m.facebook.com/" : "https://www.facebook.com/";
-    const xShareUrl = "https://x.com/intent/tweet";
-    const igShareUrl = "https://www.instagram.com/";
-    
-    const downloadHref = isMobile ? "https://tinyurl.com/bmnrux6t" : imageBase64;
-    const downloadAttr = isMobile ? "" : `download="atmos_story_${Date.now()}.png"`;
-    const targetAttr = isMobile ? 'target="_blank"' : '';
-    
-    const uniqueId = Date.now();
-    const statusDivId = `story_status_${uniqueId}`;
-    const buttonLabel = isMobile ? "[ИЗТЕГЛИ СТОРИТО ЧРЕЗ БРАУЗЪР]" : "[СВАЛИ ИЗОБРАЖЕНИЕТО ЗА СТОРИ (PC)]";
 
-    setTimeout(() => {
-      output.innerHTML += `
-        <div class="terminal-card-container" style="margin: 20px 0; padding: 15px; border: 1px dashed ${activeStyle.accentColor}; background: #000; font-family: monospace;">
-          <p style="color: #00ff33; margin-bottom: 10px;">[SYSTEM] Вертикалното Стори (1080x1920) е рендирано успешно с тема <span style="color: #fff; background: ${activeStyle.accentColor}; padding: 2px 6px;">${activeStyle.name}</span>:</p>
-          
-          <img src="${imageBase64}" style="width: 100%; max-width: 220px; border: 1px solid #333; display: block; margin-bottom: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.5);" alt="Atmos Story Image"/>
-          
-          <a href="${downloadHref}" ${downloadAttr} ${targetAttr} rel="noopener noreferrer" style="background: ${activeStyle.accentColor}; color: #000; padding: 10px 18px; border: none; font-weight: bold; font-family: monospace; cursor: pointer; display: inline-block; margin-bottom: 15px; text-transform: uppercase; text-decoration: none;">
-            ${buttonLabel}
-          </a>
+    try {
+      let cache = JSON.parse(localStorage.getItem('fortune_cache') || '[]');
+      cache.push({ text: userText, date: dateStr, timestamp: Date.now(), type: 'story', image: imageBase64, style: activeStyle.name });
+      if (cache.length > 50) cache.shift();
+      localStorage.setItem('fortune_cache', JSON.stringify(cache));
+    } catch(e) {}
 
-          <div id="${statusDivId}" style="color: #888; font-size: 12px; margin-bottom: 10px;">[БЪФЕР] Синхронизиране на инжектирания текст...</div>
-          <p style="color: #555; margin-bottom: 10px;">[СПОДЕЛЯНЕ] Отвори приложението и качи от галерията:</p>
-          <div class="share-buttons-group" style="display: flex; flex-wrap: wrap; gap: 10px;">
-            <a href="${fbShareUrl}" target="_blank" rel="noopener noreferrer" style="background: #3b5998; color: #fff; padding: 8px 15px; text-decoration: none; font-weight: bold; display: inline-block;">[FACEBOOK]</a>
-            <a href="${igShareUrl}" target="_blank" rel="noopener noreferrer" style="background: #e1306c; color: #fff; padding: 8px 15px; text-decoration: none; font-weight: bold; display: inline-block;">[INSTAGRAM]</a>
-            <a href="${xShareUrl}" target="_blank" rel="noopener noreferrer" style="background: #111; color: #fff; padding: 8px 15px; text-decoration: none; font-weight: bold; border: 1px solid #fff; display: inline-block;">[X / TWITTER]</a>
+    const activeDb = window.db || (typeof firebase !== "undefined" ? firebase.database() : null);
+    if (activeDb) {
+      activeDb.ref("fortune_buffer").set({
+        text: userText,
+        date: dateStr,
+        styleMode: styleIndex,
+        isStory: true,
+        timestamp: Date.now(),
+      }).catch(() => {});
+    }
+
+    const isModernUI = window.__isModernUI === true;
+    const downloadTargetUrl = "https://tinyurl.com/bmnrux6t";
+
+    if (isModernUI) {
+      setTimeout(() => {
+        output.innerHTML += `
+          <div class="terminal-card-container" style="margin: 20px 0; padding: 15px; border: 1px dashed ${activeStyle.accentColor}; background: #000; font-family: monospace;">
+            <p style="color: #00ff33; margin-bottom: 10px;">[SYSTEM] Вертикалното Стори (1080x1920) е рендирано успешно с тема <span style="color: #fff; background: ${activeStyle.accentColor}; padding: 2px 6px;">${activeStyle.name}</span>:</p>
+            <img src="${imageBase64}" style="width: 100%; max-width: 220px; border: 1px solid #333; display: block; margin-bottom: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.5);" alt="Atmos Story Image"/>
+            <a href="${downloadTargetUrl}" target="_blank" rel="noopener noreferrer" style="background: #00ff33; color: #000; padding: 10px 18px; border: none; font-weight: bold; font-family: monospace; cursor: pointer; display: inline-block; margin-bottom: 10px; text-transform: uppercase; text-decoration: none; border-radius: 4px;">
+              📥 [СВАЛИ ИЗОБРАЖЕНИЕТО]
+            </a>
           </div>
-        </div>
-      `;
+        `;
+        window.scrollTo(0, document.body.scrollHeight);
+      }, 500);
+    } else {
+      const fbShareUrl = isMobile ? "https://m.facebook.com/" : "https://www.facebook.com/";
+      const xShareUrl = "https://x.com/intent/tweet";
+      const igShareUrl = "https://www.instagram.com/";
+      const downloadHref = isMobile ? downloadTargetUrl : imageBase64;
+      const downloadAttr = isMobile ? "" : `download="atmos_story_${Date.now()}.png"`;
+      const targetAttr = isMobile ? 'target="_blank"' : '';
 
-      const activeDb = window.db || (typeof firebase !== "undefined" ? firebase.database() : null);
-      const statusDiv = document.getElementById(statusDivId);
-
-      if (activeDb) {
-        activeDb
-          .ref("fortune_buffer")
-          .set({
-            text: userText,
-            date: dateStr,
-            styleMode: styleIndex,
-            isStory: true,
-            timestamp: Date.now(),
-          })
-          .then(() => {
-            if (statusDiv) statusDiv.innerHTML = "<span style='color: #00ff33;'>[БЪФЕР] Успешна облачна синхронизация на стила!</span>";
-          })
-          .catch((err) => {
-            console.error("Firebase error:", err);
-            if (statusDiv) statusDiv.innerHTML = "<span style='color: #ff6666;'>[ГРЕШКА] Критичен отказ на облачния хост</span>";
-          });
-      } else {
-        if (statusDiv) statusDiv.innerHTML = "<span style='color: #ffaa00;'>[ПРЕДУПРЕЖДЕНИЕ] Локален режим - Липсва база данни</span>";
-      }
-
-      window.scrollTo(0, document.body.scrollHeight);
-    }, 500);
+      setTimeout(() => {
+        output.innerHTML += `
+          <div class="terminal-card-container" style="margin: 20px 0; padding: 15px; border: 1px dashed ${activeStyle.accentColor}; background: #000; font-family: monospace;">
+            <p style="color: #00ff33; margin-bottom: 10px;">[SYSTEM] Вертикалното Стори (1080x1920) е рендирано успешно с тема <span style="color: #fff; background: ${activeStyle.accentColor}; padding: 2px 6px;">${activeStyle.name}</span>:</p>
+            <img src="${imageBase64}" style="width: 100%; max-width: 220px; border: 1px solid #333; display: block; margin-bottom: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.5);" alt="Atmos Story Image"/>
+            <a href="${downloadHref}" ${downloadAttr} ${targetAttr} rel="noopener noreferrer" style="background: ${activeStyle.accentColor}; color: #000; padding: 10px 18px; border: none; font-weight: bold; font-family: monospace; cursor: pointer; display: inline-block; margin-bottom: 15px; text-transform: uppercase; text-decoration: none; border-radius: 4px;">
+              [СВАЛИ ИЗОБРАЖЕНИЕТО ЗА СТОРИ]
+            </a>
+            <p style="color: #555; margin-bottom: 10px;">[СПОДЕЛЯНЕ] Отвори приложението и качи от галерията:</p>
+            <div class="share-buttons-group" style="display: flex; flex-wrap: wrap; gap: 10px;">
+              <a href="${fbShareUrl}" target="_blank" rel="noopener noreferrer" style="background: #3b5998; color: #fff; padding: 8px 15px; text-decoration: none; font-weight: bold; display: inline-block; border-radius: 4px;">[FACEBOOK]</a>
+              <a href="${igShareUrl}" target="_blank" rel="noopener noreferrer" style="background: #e1306c; color: #fff; padding: 8px 15px; text-decoration: none; font-weight: bold; display: inline-block; border-radius: 4px;">[INSTAGRAM]</a>
+              <a href="${xShareUrl}" target="_blank" rel="noopener noreferrer" style="background: #111; color: #fff; padding: 8px 15px; text-decoration: none; font-weight: bold; border: 1px solid #fff; display: inline-block; border-radius: 4px;">[X / TWITTER]</a>
+            </div>
+          </div>
+        `;
+        window.scrollTo(0, document.body.scrollHeight);
+      }, 500);
+    }
 
     return "Генераторът на истории приключи работа.";
   } catch (e) {
@@ -530,8 +712,9 @@ function generateStoryMessage(cmd) {
     return "Грешка при рендиране на Стори модула.";
   }
 }
+
 /* ==========================================================
-   КРИПТИРАНЕ БЕЗ РАЗДУВАНЕ (Съотношение 1:1 - 100 букви = 100 букви)
+   КРИПТИРАНЕ БЕЗ РАЗДУВАНЕ (XOR 1:1)
 ========================================================== */
 
 function atmosXorEncode(text, key) {
@@ -541,13 +724,8 @@ function atmosXorEncode(text, key) {
   for (let i = 0; i < text.length; i++) {
     const charCode = text.charCodeAt(i);
     const keyChar = key.charCodeAt(i % key.length);
-
-    // Правим XOR операция
     let xorValue = charCode ^ keyChar;
 
-    // ХАК ЗА БЕЗОПАСНОСТ: Ако XOR стойността е в диапазона на невидимите/контролни символи (0-31)
-    // я изместваме нагоре в безопасна зона (например + 0xE000 - Private Use Area на Unicode)
-    // за да може Firebase и браузърът да я прочетат и запишат безпроблемно като единичен символ.
     if (xorValue < 32) {
       xorValue += 0xE000;
     }
@@ -566,12 +744,10 @@ function atmosXorDecode(cipherText, key) {
     let charCode = cipherText.charCodeAt(i);
     const keyChar = key.charCodeAt(i % key.length);
 
-    // Връщаме обратно от безопасната зона, ако е била изместена
     if (charCode >= 0xE000 && charCode < 0xE020) {
       charCode -= 0xE000;
     }
 
-    // Обратен XOR
     const originalCharCode = charCode ^ keyChar;
     result += String.fromCharCode(originalCharCode);
   }
@@ -583,39 +759,27 @@ function atmosXorDecode(cipherText, key) {
    CRYPTO SECURITY LAYER (AUTOLOCK & TAB CLOSE)
 ========================================================== */
 
-// 1. ЗАЩИТА: При затваряне на сайта, презареждане (F5) или затваряне на таба
 window.addEventListener("beforeunload", function () {
-  // Изчистваме секретния ключ веднага, за да не се пази на диска
   localStorage.removeItem("crypto_key");
 });
 
-
-// 2. ЗАЩИТА: ТАЙМЕР ЗА 5 МИНУТИ НЕАКТИВНОСТ
-let inactivityTimer;
-const INACTIVITY_LIMIT = 5 * 60 * 1000; // 5 минути в милисекунди
+let inactivityTimer = null;
+const INACTIVITY_LIMIT = 5 * 60 * 1000;
 
 function resetInactivityTimer() {
-  // Изчистваме стария таймер при всяко действие
-  clearTimeout(inactivityTimer);
+  if (inactivityTimer) clearTimeout(inactivityTimer);
   
-  // Стартираме нов таймер
   inactivityTimer = setTimeout(function() {
-    // Тази логика се изпълнява САМО ако в момента сме в Крипто режим
     if (window.cryptoModeActive) {
-      
-      // Изчистваме ключа от паметта
       localStorage.removeItem("crypto_key");
-      
-      // Връщаме нормалното състояние на терминала
       window.cryptoModeActive = false;
       document.body.classList.remove("crypto-mode");
       
-      // Изчистваме екрана и презареждаме нормалния чат
-      document.getElementById("messages").innerHTML = "";
+      const msgElem = document.getElementById("messages");
+      if (msgElem) msgElem.innerHTML = "";
       if (typeof reloadChatMessages === "function") reloadChatMessages();
       if (typeof updatePrompt === "function") updatePrompt();
       
-      // Принтираме системно съобщение за сигурност в терминала (ако съществува)
       const termOutput = document.getElementById("terminalOutput");
       if (termOutput) {
         termOutput.innerHTML += "<br><span style='color: #ff3333;'>[SECURITY ALERT] Session expired due to 5 minutes of inactivity. Crypto key wiped.</span>";
@@ -624,26 +788,20 @@ function resetInactivityTimer() {
   }, INACTIVITY_LIMIT);
 }
 
-// Следим за активност на потребителя (мърдане на мишка, натискане на клавиш, кликове)
 window.addEventListener("mousemove", resetInactivityTimer);
 window.addEventListener("keydown", resetInactivityTimer);
 window.addEventListener("click", resetInactivityTimer);
 window.addEventListener("touchstart", resetInactivityTimer);
 
-// Стартираме таймера първоначално при зареждане на сайта
 resetInactivityTimer();
-// 3. ЗАЩИТА: При заключване на екрана на телефон/компютър или сменяне на таба
+
 document.addEventListener("visibilitychange", function () {
-  // Ако табът се скрие (екранът се заключи или смениш приложението) И сме в Крипто режим
   if (document.hidden && window.cryptoModeActive) {
-    
-    // Унищожаваме ключа на секундата!
     localStorage.removeItem("crypto_key");
-    
-    // Връщаме в нормален режим за сигурност
     window.cryptoModeActive = false;
     document.body.classList.remove("crypto-mode");
-    document.getElementById("messages").innerHTML = "";
+    const msgElem = document.getElementById("messages");
+    if (msgElem) msgElem.innerHTML = "";
     
     if (typeof reloadChatMessages === "function") reloadChatMessages();
     if (typeof updatePrompt === "function") updatePrompt();
@@ -653,43 +811,26 @@ document.addEventListener("visibilitychange", function () {
 });
 
 /* ==========================================================
-   МАРВИН ЕФЕКТ: ЧИСТ РОБОТСКИ ГЛАС (АНГЛИЙСКИ)
+   LINK OPENER FOR WEBVIEW
 ========================================================== */
-function playMarvinVoice(text) {
-  if (!window.speechSynthesis) return;
-  
-  try {
-    // Ако енджинът е забил или чака, го отпушваме насила
-    window.speechSynthesis.cancel();
-    
-    const utterance = new SpeechSynthesisUtterance(text);
-    const voices = window.speechSynthesis.getVoices();
-    
-    const enVoice = voices.find(v => v.lang.includes("en-US") || v.lang.includes("en-GB") || v.lang.toLowerCase().includes("en"));
-    
-    if (enVoice) {
-      utterance.voice = enVoice;
-    } else if (voices.length > 0) {
-      utterance.voice = voices[0];
-    }
-    
-    utterance.lang = "en-US";
-    utterance.pitch = 0.3; 
-    utterance.rate = 0.7;  
-    utterance.volume = 1.0;
-    
-    window.speechSynthesis.speak(utterance);
-  } catch (e) {
-    console.log("Marvin voice error: ", e);
-  }
-}
 
-// КРИТИЧНО ЗА АНДРОИД APK: Форсираме браузъра да зареди списъка с гласове на заден план
-if (window.speechSynthesis) {
-  window.speechSynthesis.getVoices();
-  if (window.speechSynthesis.addEventListener) {
-    window.speechSynthesis.addEventListener("voiceschanged", () => {
-      window.speechSynthesis.getVoices();
-    });
+window.openAtmosLink = function(url, download = false) {
+  if (download) {
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = url.split('/').pop() || 'atmos_image.png';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  } else {
+    if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+      try {
+        window.open(url, '_system');
+      } catch(e) {
+        window.open(url, '_blank');
+      }
+    } else {
+      window.open(url, '_blank');
+    }
   }
-}
+};

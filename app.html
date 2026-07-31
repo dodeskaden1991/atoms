@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Мета тагове от стария индекс -->
+  <meta name="title" content="Atmos — дигитална свободна зона">
+  <meta name="description" content="Atmos — терминален чат без акаунти, без следене и без алгоритми. Място, където думите тежат повече от шума.">
+  <meta name="keywords" content="Atmos, terminal chat, minimal, privacy, freedom, text, digital zone">
+  <meta name="author" content="Deyan">
+
+  <meta property="og:title" content="Atmos — дигитална свободна зона">
+  <meta property="og:description" content="Свободен терминален чат. Без акаунти. Без следене. Без алгоритми.">
+  <meta property="og:image" content="https://atoms.free.bg/atmos-preview.jpg">
+  <meta property="og:url" content="https://atoms.free.bg/">
+  <meta property="og:type" content="website">
+
+  <link rel="icon" type="image/png" href="ico.png">
+
+  <title>Atmos — дигитална свободна зона</title>
+
+  <!-- UI CSS за модерния интерфейс -->
+  <link rel="stylesheet" href="css/ui.css">
+  <link rel="stylesheet" href="css/effect.css"
+</head>
+<body>
+
+  <!-- МОДАЛЕН ПРОЗОРЕЦ ЗА ИЗБОР НА ВИЗИЯ (само при първо зареждане) -->
+  <div id="welcomeModal" style="display:none;">
+    <div class="modal-overlay">
+      <div class="modal-box">
+        <h2>Добре дошли в Atmos</h2>
+        <p>Изберете предпочитания интерфейс:</p>
+        <div class="modal-buttons">
+          <button id="chooseModern">✨ Модерен</button>
+          <button id="chooseClassic">🖥️ Класически</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ХЕДЪР -->
+  <header id="appHeader">
+    <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+      <h1>Atmos <span class="motto">— дигитална свободна зона. Тук думите тежат повече от алгоритмите.</span></h1>
+    </div>
+    <div id="headerControls">
+      <span id="userArea">
+        <span id="userNick">Anonymous</span>
+        <button id="userNickEdit" title="Смени никнейм">✏️</button>
+      </span>
+      <button id="switchViewBtn" title="Към класическия интерфейс">🔄 Класически</button>
+      <button id="themeToggle" title="Превключи тема">🌓</button>
+      <button id="terminalToggle" title="Скрий/покажи терминала">▾</button>
+    </div>
+  </header>
+
+  <!-- ОСНОВЕН ЛАЙАУТ -->
+  <div id="appLayout">
+    <!-- Ляв панел -->
+    <aside id="sidebar">
+      <section id="roomsSection">
+        <div class="sectionHeader">
+          <span>📡 Стаи</span>
+          <button class="addBtn" id="addRoomBtn" title="Добави стая">+</button>
+        </div>
+        <ul id="roomList"></ul>
+      </section>
+      <section id="contactsSection">
+        <div class="sectionHeader">
+          <span>👤 Контакти</span>
+          <button class="addBtn" id="addContactBtn" title="Добави контакт">+</button>
+        </div>
+        <ul id="contactList"></ul>
+      </section>
+    </aside>
+
+    <!-- Чат област -->
+    <main id="chatArea">
+      <div id="chatHeader">
+        <span id="currentChatLabel">#main</span>
+        <span id="chatStatus"></span>
+      </div>
+      <div id="messages"></div>
+      <div id="inputArea">
+        <input id="messageInput" type="text" placeholder="Съобщение...">
+        <button id="sendBtn">Изпрати</button>
+      </div>
+    </main>
+  </div>
+
+  <!-- ТЕРМИНАЛ (долен панел) -->
+  <div id="terminalPanel">
+    <div id="terminalOutput">Atmos Terminal v3.14<br>Type /help for commands.</div>
+    <div id="terminalLine">
+      <span id="terminalPrompt"></span>
+      <input id="terminalInput" type="text" autocomplete="off">
+    </div>
+  </div>
+
+  <!-- ФУТЪР -->
+  <footer id="appFooter">
+    © 2026 Atmos — Свободен чат. Без акаунти. Без следене.<br>
+    <small>Свали Android APK: <a href="https://drive.google.com/file/d/1ERq00DlCwpx7iXKUOyng6DBbzfhR_Qzi/view?usp=drive_link" target="_blank">ТУК</a> Актуализирано приложение - 6.06.26</small>
+  </footer>
+
+  <!-- FIREBASE & JS -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  <script src="js/chat.js"></script>
+  <script src="js/main.js"></script>
+  <script src="js/terminal.js"></script>
+  <script src="js/fortunes_data.js"></script>
+  <script src="js/easteregg.js"></script>
+
+  <!-- ДОПЪЛНИТЕЛЕН UI КОД -->
+  <script>
+    (function() {
+      'use strict';
+
+      // ---- ПРОВЕРКА ЗА ПРЕДПОЧИТАНИЕ ----
+      const pref = localStorage.getItem('ui_preference');
+      if (pref === 'classic') {
+        window.location.href = 'classic.html';
+        return;
+      }
+      if (!pref) {
+        // Показваме модалния прозорец
+        document.getElementById('welcomeModal').style.display = 'flex';
+        document.getElementById('chooseModern').addEventListener('click', function() {
+          localStorage.setItem('ui_preference', 'modern');
+          document.getElementById('welcomeModal').style.display = 'none';
+          initModernUI();
+        });
+        document.getElementById('chooseClassic').addEventListener('click', function() {
+          localStorage.setItem('ui_preference', 'classic');
+          window.location.href = 'classic.html';
+        });
+        // Изчакваме потребителя да избере
+        return;
+      }
+
+      // Ако има modern, инициализираме веднага
+      initModernUI();
+
+      // ---- ФУНКЦИЯ ЗА ИНИЦИАЛИЗАЦИЯ НА МОДЕРНИЯ UI ----
+      function initModernUI() {
+        // Елементи
+        const messagesEl = document.getElementById('messages');
+        const terminalOutput = document.getElementById('terminalOutput');
+        const terminalInput = document.getElementById('terminalInput');
+        const messageInput = document.getElementById('messageInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const roomList = document.getElementById('roomList');
+        const contactList = document.getElementById('contactList');
+        const currentChatLabel = document.getElementById('currentChatLabel');
+        const themeToggle = document.getElementById('themeToggle');
+        const terminalToggle = document.getElementById('terminalToggle');
+        const terminalPanel = document.getElementById('terminalPanel');
+        const addRoomBtn = document.getElementById('addRoomBtn');
+        const addContactBtn = document.getElementById('addContactBtn');
+        const switchViewBtn = document.getElementById('switchViewBtn');
+        const userNickSpan = document.getElementById('userNick');
+        const userNickEdit = document.getElementById('userNickEdit');
+
+        // ---- Състояние ----
+        let currentMode = 'main';
+        let currentTarget = null;
+
+        // ---- Контакти ----
+        function getContacts() {
+          try { return JSON.parse(localStorage.getItem('contacts') || '[]'); } catch { return []; }
+        }
+        function saveContacts(contacts) {
+          localStorage.setItem('contacts', JSON.stringify(contacts));
+        }
+        function addContact(name) {
+          const contacts = getContacts();
+          if (!contacts.includes(name)) {
+            contacts.push(name);
+            saveContacts(contacts);
+            renderContacts();
+          }
+        }
+
+        // ---- Рендиране на стаи ----
+        function renderRooms() {
+          const rooms = getJoinedRooms();
+          roomList.innerHTML = '';
+          const mainLi = document.createElement('li');
+          mainLi.textContent = '#main';
+          mainLi.dataset.room = 'main';
+          if (currentMode === 'main') mainLi.classList.add('active');
+          mainLi.addEventListener('click', () => switchToMain());
+          roomList.appendChild(mainLi);
+
+          rooms.forEach(room => {
+            const li = document.createElement('li');
+            li.textContent = '#' + room;
+            li.dataset.room = room;
+            if (currentMode === 'room' && currentTarget === room) li.classList.add('active');
+            li.addEventListener('click', () => switchToRoom(room));
+            roomList.appendChild(li);
+          });
+        }
+
+        // ---- Рендиране на контакти ----
+        function renderContacts() {
+          const contacts = getContacts();
+          contactList.innerHTML = '';
+          contacts.forEach(name => {
+            const li = document.createElement('li');
+            li.textContent = name;
+            li.dataset.contact = name;
+            if (currentMode === 'private' && currentTarget === name) li.classList.add('active');
+            li.addEventListener('click', () => switchToPrivate(name));
+            contactList.appendChild(li);
+          });
+        }
+
+        // ---- Превключване на режими ----
+        function switchToMain() {
+          currentMode = 'main';
+          currentTarget = null;
+          currentChatLabel.textContent = '#main';
+          window.showMode = 'all';
+          window.showRoom = null;
+          if (typeof reloadChatMessages === 'function') reloadChatMessages();
+          renderRooms();
+          renderContacts();
+          updateSendButton();
+        }
+
+        function switchToRoom(room) {
+          currentMode = 'room';
+          currentTarget = room;
+          currentChatLabel.textContent = '#' + room;
+          window.showMode = 'room';
+          window.showRoom = room;
+          if (typeof reloadChatMessages === 'function') reloadChatMessages();
+          renderRooms();
+          renderContacts();
+          updateSendButton();
+        }
+
+        function switchToPrivate(contact) {
+          currentMode = 'private';
+          currentTarget = contact;
+          currentChatLabel.textContent = '@' + contact;
+          window.showMode = 'private';
+          window.showRoom = null;
+          if (typeof reloadChatMessages === 'function') reloadChatMessages();
+          setTimeout(applyPrivateFilter, 100);
+          renderRooms();
+          renderContacts();
+          updateSendButton();
+        }
+
+        // ---- Филтър за private ----
+        function applyPrivateFilter() {
+          if (currentMode !== 'private' || !currentTarget) return;
+          const children = messagesEl.children;
+          for (let child of children) {
+            if (child.classList.contains('privateMsg')) {
+              const text = child.textContent || '';
+              child.style.display = text.includes(currentTarget) ? '' : 'none';
+            } else {
+              child.style.display = 'none';
+            }
+          }
+        }
+
+        // ---- Обновяване на бутона ----
+        function updateSendButton() {
+          if (currentMode === 'main') sendBtn.textContent = '📢 Изпрати';
+          else if (currentMode === 'room') sendBtn.textContent = '📢 #' + currentTarget;
+          else if (currentMode === 'private') sendBtn.textContent = '✉️ @' + currentTarget;
+        }
+
+        // ---- Изпращане ----
+        function sendMessage() {
+          const text = messageInput.value.trim();
+          if (!text) return;
+          messageInput.value = '';
+          if (currentMode === 'main') {
+            if (typeof sendChatMessage === 'function') sendChatMessage(text);
+          } else if (currentMode === 'room') {
+            if (typeof sendRoomMessage === 'function') sendRoomMessage(currentTarget, text);
+          } else if (currentMode === 'private') {
+            if (typeof sendPrivateMessage === 'function') sendPrivateMessage(currentTarget, text);
+          }
+        }
+
+        // ---- Актуализиране на никнейма ----
+        function updateNickDisplay() {
+          const nick = getNickname();
+          userNickSpan.textContent = nick;
+        }
+        userNickEdit.addEventListener('click', function() {
+          const newNick = prompt('Въведете нов никнейм:', getNickname());
+          if (newNick && newNick.trim()) {
+            setNickname(newNick.trim());
+            updateNickDisplay();
+            // Презареждаме съобщенията, за да се покаже новият ник
+            if (typeof reloadChatMessages === 'function') reloadChatMessages();
+          }
+        });
+
+        // ---- Превключване на визията ----
+        switchViewBtn.addEventListener('click', function() {
+          localStorage.setItem('ui_preference', 'classic');
+          window.location.href = 'classic.html';
+        });
+
+        // ---- Тема ----
+        themeToggle.addEventListener('click', function() {
+          const isLight = document.body.classList.contains('light');
+          document.body.classList.toggle('light', !isLight);
+          localStorage.setItem('theme', isLight ? 'dark' : 'light');
+        });
+
+        // ---- Терминал toggle ----
+        let terminalVisible = true;
+        terminalToggle.addEventListener('click', function() {
+          terminalVisible = !terminalVisible;
+          terminalPanel.style.display = terminalVisible ? 'flex' : 'none';
+          terminalToggle.textContent = terminalVisible ? '▾' : '▸';
+        });
+
+        // ---- Добавяне на стая ----
+        addRoomBtn.addEventListener('click', function() {
+          const roomName = prompt('Въведете име на нова стая:');
+          if (roomName && roomName.trim()) {
+            if (typeof runCommand === 'function') {
+              runCommand('/room enter ' + roomName.trim());
+              setTimeout(renderRooms, 300);
+            }
+          }
+        });
+
+        // ---- Добавяне на контакт ----
+        addContactBtn.addEventListener('click', function() {
+          const name = prompt('Въведете ник на контакта:');
+          if (name && name.trim()) {
+            addContact(name.trim());
+          }
+        });
+
+        // ---- Събития за изпращане ----
+        sendBtn.addEventListener('click', sendMessage);
+        messageInput.addEventListener('keydown', function(e) {
+          if (e.key === 'Enter') sendMessage();
+        });
+
+        // ---- Терминал ----
+        if (terminalInput) {
+          terminalInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+              const cmd = terminalInput.value.trim();
+              terminalInput.value = '';
+              if (typeof runCommand === 'function') {
+                runCommand(cmd);
+              }
+            }
+          });
+        }
+
+        // ---- Слушател за нови private съобщения ----
+        if (window.db) {
+          const chatRef = window.db.ref('atmos_chat');
+          chatRef.orderByChild('timestamp').limitToLast(1).on('child_added', function(snap) {
+            const msg = snap.val();
+            if (msg && msg.private === true) {
+              const myNick = getNickname();
+              if (msg.to === myNick || msg.name === myNick) {
+                if (msg.name !== myNick) addContact(msg.name);
+                if (msg.name === myNick && msg.to && msg.to !== myNick) addContact(msg.to);
+              }
+            }
+          });
+        }
+
+        // ---- Прихващане на reload ----
+        const originalReload = window.reloadChatMessages;
+        if (originalReload) {
+          window.reloadChatMessages = function() {
+            originalReload();
+            if (currentMode === 'private') setTimeout(applyPrivateFilter, 200);
+            renderRooms();
+            renderContacts();
+          };
+        }
+        const originalAppend = window.appendMessage;
+        if (originalAppend) {
+          window.appendMessage = function(text, isPrivate, isRoom) {
+            originalAppend(text, isPrivate, isRoom);
+            if (currentMode === 'private') setTimeout(applyPrivateFilter, 50);
+          };
+        }
+
+        // ---- Следим за промени в localStorage ----
+        window.addEventListener('storage', function(e) {
+          if (e.key === 'rooms') renderRooms();
+          if (e.key === 'contacts') renderContacts();
+        });
+
+        // ---- Стартиране ----
+        // Прилагаме тема
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme === 'light') {
+          document.body.classList.add('light');
+        } else {
+          document.body.classList.remove('light');
+        }
+        updateNickDisplay();
+        renderRooms();
+        renderContacts();
+        switchToMain();
+
+        // Слагаме слушател за крипто режим – промяната идва от /swap в терминала,
+        // но можем да наблюдаваме промяна на клас на body
+        const observer = new MutationObserver(function() {
+          // Ако се добави клас crypto-mode, нищо не правим – CSS се грижи
+        });
+        observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+      }
+
+    })();
+  </script>
+
+  <!-- Стилове за модалния прозорец (вграден) -->
+  <style>
+    #welcomeModal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      background: rgba(0,0,0,0.7);
+      z-index: 99999;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(4px);
+    }
+    .modal-overlay {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+    }
+    .modal-box {
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      padding: 30px 40px;
+      border-radius: 12px;
+      max-width: 400px;
+      width: 90%;
+      text-align: center;
+      border: 1px solid var(--border-color);
+      box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+    }
+    .modal-box h2 {
+      margin-top: 0;
+      color: var(--text-accent);
+    }
+    .modal-box p {
+      margin: 16px 0 24px;
+      color: var(--text-secondary);
+    }
+    .modal-buttons {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .modal-buttons button {
+      padding: 10px 24px;
+      border: none;
+      border-radius: 6px;
+      font-family: var(--font);
+      font-size: 16px;
+      cursor: pointer;
+      transition: 0.2s;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      border: 1px solid var(--border-color);
+    }
+    .modal-buttons button:hover {
+      background: var(--hover-bg);
+      transform: scale(1.03);
+    }
+    .modal-buttons button:first-child {
+      background: var(--text-accent);
+      color: var(--bg-primary);
+      border-color: var(--text-accent);
+    }
+    .modal-buttons button:first-child:hover {
+      opacity: 0.8;
+    }
+    body.light .modal-box {
+      background: #f0f2f5;
+      color: #1a1a1a;
+    }
+    body.light .modal-buttons button:first-child {
+      background: #006644;
+      color: #fff;
+    }
+  </style>
+
+</body>
+</html>

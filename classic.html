@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="bg">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <meta name="title" content="Atmos — дигитална свободна зона">
+  <meta name="description" content="Atmos — терминален чат без акаунти, без следене и без алгоритми. Място, където думите тежат повече от шума.">
+  <meta name="keywords" content="Atmos, terminal chat, minimal, privacy, freedom, text, digital zone">
+  <meta name="author" content="Deyan">
+
+  <meta property="og:title" content="Atmos — дигитална свободна зона">
+  <meta property="og:description" content="Свободен терминален чат. Без акаунти. Без следене. Без алгоритми.">
+  <meta property="og:image" content="https://atoms.free.bg/atmos-preview.jpg">
+  <meta property="og:url" content="https://atoms.free.bg/">
+  <meta property="og:type" content="website">
+
+  <link rel="icon" type="image/png" href="ico.png">
+
+  <title>Atmos — дигитална свободна зона</title>
+
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/effect.css">
+</head>
+
+<body class="dark">
+
+  <audio id="audioPlayer"></audio>
+  <audio id="notifySound" src="notify.mp3" preload="auto"></audio>
+
+  <header id="header">
+    <h1>Atmos — дигитална свободна зона.</h1>
+    <p>Тук думите тежат повече от алгоритмите.
+      <button id="switchToModernBtn" style="background:none; border:1px solid var(--matrix-text); color:var(--matrix-text); padding:4px 10px; border-radius:4px; cursor:pointer; font-family:inherit; font-size:12px;">✨ Модерен</button>
+    </p>
+  </header>
+
+  <div id="main">
+
+    <div id="chatWindow">
+      <pre id="messages"></pre>
+    </div>
+
+    <div id="terminalPanel">
+      <div id="terminalOutput">Atmos Terminal v3.14<br>Type /help for commands.</div>
+
+      <div id="terminalLine">
+        <span id="terminalPrompt"></span>
+        <input id="terminalInput" type="text" autocomplete="off" autofocus>
+      </div>
+    </div>
+
+  </div>
+
+  <footer>
+    © 2026 Atmos — Свободен чат. Без акаунти. Без следене.<br>
+    <small>Свали Android APK: <a href="https://drive.google.com/file/d/1ERq00DlCwpx7iXKUOyng6DBbzfhR_Qzi/view?usp=drive_link" target="_blank">ТУК</a> Актуализирано приложение - 6.06.26</small>
+  </footer>
+
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
+  <!-- Зареждаме външните JS файлове ПЪРВО -->
+  <script src="js/chat.js"></script>
+  <script src="js/main.js"></script>
+  <script src="js/terminal.js"></script>
+  <script src="js/fortunes_data.js"></script>
+  <script src="js/easteregg.js"></script>
+
+  <!-- Логика за бутоните (зарежда се СЛЕД външните JS файлове) -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // 1. Бутон за преминаване към Модерен изглед
+      const switchBtn = document.getElementById('switchToModernBtn');
+      if (switchBtn) {
+        switchBtn.addEventListener('click', function() {
+          window.location.href = 'index.html';
+        });
+      }
+
+      // 2. Безопасна проверка за промяна на никнейм (ако елементът съществува)
+      const nickEditBtn = document.getElementById('userNickEditClassic');
+      if (nickEditBtn) {
+        nickEditBtn.addEventListener('click', function() {
+          const currentNick = typeof getNickname === 'function' ? getNickname() : '';
+          const n = prompt('Въведете нов никнейм:', currentNick);
+          if (n && n.trim()) { 
+            if (typeof setNickname === 'function') setNickname(n.trim()); 
+            if (typeof updateNick === 'function') updateNick(); 
+            if (typeof reloadChatMessages === 'function') reloadChatMessages(); 
+          }
+        });
+      }
+    });
+  </script>  
+
+  <script>
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/sw.js");
+    }
+  </script>
+
+  <!-- Android TTS Bridge -->
+  <script>
+    (function() {
+      let androidTTSPresent = false;
+      
+      if (typeof AndroidTTS !== 'undefined' && AndroidTTS.isReady && AndroidTTS.isReady()) {
+        androidTTSPresent = true;
+        console.log("[HTML] Android TTS bridge detected");
+      }
+      
+      const originalVoice = window.playMarvinVoice;
+      if (typeof originalVoice === 'function') {
+        window.playMarvinVoice = function(text) {
+          if (androidTTSPresent) {
+            try {
+              AndroidTTS.speak(text);
+              return;
+            } catch(e) {
+              console.warn("[HTML] AndroidTTS failed, fallback to Web Speech", e);
+            }
+          }
+          originalVoice(text);
+        };
+      }
+      
+      const checkInterval = setInterval(function() {
+        if (!androidTTSPresent && typeof AndroidTTS !== 'undefined' && AndroidTTS.isReady && AndroidTTS.isReady()) {
+          androidTTSPresent = true;
+          console.log("[HTML] Android TTS bridge late-detected");
+          clearInterval(checkInterval);
+        }
+      }, 1000);
+      
+      setTimeout(function() { clearInterval(checkInterval); }, 10000);
+    })();
+  </script>
+
+  <!-- Отваряне на външни линкове в Capacitor -->
+  <script>
+    (function() {
+      async function openLink(url) {
+        if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) {
+          try {
+            if (window.Capacitor && window.Capacitor.nativeCallback) {
+              window.Capacitor.nativeCallback('Browser', 'open', { url: url });
+            } else {
+              window.open(url, '_system');
+            }
+          } catch(e) {
+            window.open(url, '_blank');
+          }
+        } else {
+          window.open(url, '_blank');
+        }
+      }
+      
+      document.addEventListener('click', function(e) {
+        let target = e.target.closest('a');
+        if (target && target.href) {
+          let href = target.href;
+          if (href.indexOf('atoms.free.bg') === -1 && 
+              href.indexOf('localhost') === -1 &&
+              href.indexOf('atmos') === -1) {
+            e.preventDefault();
+            openLink(href);
+          }
+        }
+      });
+    })();
+  </script>
+
+</body>
+</html>
