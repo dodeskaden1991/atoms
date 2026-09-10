@@ -80,21 +80,15 @@
           <li><button id="themeToggle" title="Превключи тема">🌓 Тема</button></li>
         </ul>
       </section>
-      <!-- СЕКЦИЯ ИГРИ -->
-      <!-- СЕКЦИЯ ИГРИ -->
+      <!-- СЕКЦИЯ ИГРИ – вече само един бутон за отваряне на pop-up -->
       <section id="gamesSection">
         <div class="sectionHeader">
           <div>🎮 Игри</div>
         </div>
         <ul id="gamesList">
           <li>
-            <button onclick="window.location.href='game1.html'" title="Отвори Sumo Bumpers Arena">
-              🤼 Sumo Bumpers Arena
-            </button>
-          </li>
-          <li>
-            <button onclick="window.location.href='game2.html'" title="Отвори Dynamic Tank Arena">
-              ⚔️ Dynamic Tank Arena
+            <button id="openGamesPopupBtn" title="Отвори списък с игри">
+              🎮 Отвори игри
             </button>
           </li>
         </ul>
@@ -141,6 +135,28 @@
     </div>
   </div>
 
+  <!-- ПОП-ЪП ЗА ИГРИ (списък) -->
+  <div id="gamesPopup" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; z-index:99998; align-items:center; justify-content:center; background:rgba(0,0,0,0.65); backdrop-filter:blur(3px);">
+    <div style="background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:12px; width:90%; max-width:500px; max-height:80vh; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 12px 40px rgba(0,0,0,0.6);">
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 16px; background:var(--bg-primary); border-bottom:1px solid var(--border-color); flex-shrink:0;">
+        <span style="font-weight:bold; color:var(--text-accent); font-size:18px;">🎮 Списък с игри</span>
+        <button id="gamesPopupCloseBtn" style="background:none; border:none; color:var(--text-secondary); font-size:22px; cursor:pointer; line-height:1;">✕</button>
+      </div>
+      <div style="padding:16px; overflow-y:auto; flex:1;">
+        <ul style="list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:8px;">
+          <li><button onclick="window.location.href='game1.html'" style="width:100%; text-align:left; padding:10px 14px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-primary); color:var(--text-primary); font-family:var(--font); font-size:15px; cursor:pointer; transition:0.2s;">🤼 Sumo Bumpers Arena</button></li>
+          <li><button onclick="window.location.href='game2.html'" style="width:100%; text-align:left; padding:10px 14px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-primary); color:var(--text-primary); font-family:var(--font); font-size:15px; cursor:pointer; transition:0.2s;">⚔️ Dynamic Tank Arena</button></li>
+          <li><button onclick="window.location.href='game3.html'" style="width:100%; text-align:left; padding:10px 14px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-primary); color:var(--text-primary); font-family:var(--font); font-size:15px; cursor:pointer; transition:0.2s;">🔤 Мултиплейър Бесеница</button></li>
+          <li><button onclick="window.location.href='game4.html'" style="width:100%; text-align:left; padding:10px 14px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-primary); color:var(--text-primary); font-family:var(--font); font-size:15px; cursor:pointer; transition:0.2s;">🌆 Survivor Arena</button></li>
+          <li><button onclick="window.location.href='game5.html'" style="width:100%; text-align:left; padding:10px 14px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-primary); color:var(--text-primary); font-family:var(--font); font-size:15px; cursor:pointer; transition:0.2s;">🎲 Не се сърди човече</button></li>
+          <li><button onclick="window.location.href='game6.html'" style="width:100%; text-align:left; padding:10px 14px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-primary); color:var(--text-primary); font-family:var(--font); font-size:15px; cursor:pointer; transition:0.2s;">🔬 Симулатор на оптична мрежа</button></li>
+          <li><button onclick="window.location.href='game7.html'" style="width:100%; text-align:left; padding:10px 14px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-primary); color:var(--text-primary); font-family:var(--font); font-size:15px; cursor:pointer; transition:0.2s;">🐍 Змия</button></li>
+          <li><button onclick="window.location.href='game8.html'" style="width:100%; text-align:left; padding:10px 14px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-primary); color:var(--text-primary); font-family:var(--font); font-size:15px; cursor:pointer; transition:0.2s;">🍻 Пий & Играй</button></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
   <!-- МОДАЛЕН ПРОЗОРЕЦ ЗА ВЪВЕЖДАНЕ -->
   <div id="customModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:99999; align-items:center; justify-content:center; backdrop-filter:blur(3px);">
     <div style="background:var(--bg-secondary); border-radius:12px; padding:24px 28px; max-width:400px; width:90%; border:1px solid var(--border-color); box-shadow:0 8px 30px rgba(0,0,0,0.5);">
@@ -163,116 +179,18 @@
   <script src="js/ui-modern.js"></script>
 
   <style>
+    /* Стилове за лоадинга и другите елементи – запазени */
     #loadingOverlay { display:flex; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.75); z-index:99998; align-items:center; justify-content:center; backdrop-filter:blur(4px); }
-    #terminalPopup { 
-  display: none; 
-  position: fixed; 
-  top: 0; 
-  left: 0; 
-  right: 0;
-  bottom: 0;
-  width: 100%; 
-  height: 100%; 
-  z-index: 99997; 
-}
-
-.popup-overlay { 
-  display: flex; 
-  align-items: center; 
-  justify-content: center; 
-  width: 100%; 
-  height: 100%; 
-  background: rgba(0,0,0,0.65); 
-  backdrop-filter: blur(3px); 
-  padding: 12px; /* Предотвратява залепване до ръба на мобилни екрани */
-  box-sizing: border-box;
-}
-
-.popup-box { 
-  background: var(--bg-secondary); 
-  border: 1px solid var(--border-color); 
-  border-radius: 12px; 
-  width: 100%; 
-  max-width: 700px; 
-  max-height: 80vh; 
-  display: flex; 
-  flex-direction: column; 
-  overflow: hidden; 
-  box-shadow: 0 12px 40px rgba(0,0,0,0.6); 
-  box-sizing: border-box;
-}
-
-.popup-header { 
-  display: flex; 
-  justify-content: space-between; 
-  align-items: center; 
-  padding: 10px 16px; 
-  background: var(--bg-primary); 
-  border-bottom: 1px solid var(--border-color); 
-  font-weight: bold; 
-  color: var(--text-accent); 
-  flex-shrink: 0; 
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.popup-header button { 
-  background: none; 
-  border: none; 
-  color: var(--text-secondary); 
-  font-size: 22px; 
-  cursor: pointer; 
-  line-height: 1; 
-  padding: 0 6px; 
-}
-.popup-header button:hover { color: #ff4444; }
-
-.popup-box #terminalOutput { 
-  flex: 1; 
-  padding: 12px 16px; 
-  overflow-y: auto; 
-  font-size: 14px; 
-  line-height: 1.6; 
-  white-space: pre-wrap; 
-  word-break: break-word; 
-  background: var(--bg-primary); 
-  color: var(--text-primary); 
-  min-height: 150px; 
-  max-height: 50vh; 
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.popup-box #terminalLine { 
-  display: flex; 
-  align-items: center; 
-  padding: 8px 16px; 
-  background: var(--bg-secondary); 
-  border-top: 1px solid var(--border-color); 
-  flex-shrink: 0; 
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.popup-box #terminalPrompt { 
-  color: var(--text-accent); 
-  font-weight: bold; 
-  margin-right: 8px; 
-  white-space: nowrap; 
-  flex-shrink: 0; /* Гарантира, че промптът няма да свие инпута */
-}
-
-.popup-box #terminalInput { 
-  flex: 1; 
-  min-width: 0; /* КЛЮЧОВО ЗА CHROME: Спира раздуването на Flex контейнери */
-  background: transparent; 
-  border: none; 
-  outline: none; 
-  color: var(--text-primary); 
-  font-family: var(--font); 
-  font-size: 14px; 
-  caret-color: var(--text-accent); 
-}
+    #terminalPopup { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; width: 100%; height: 100%; z-index: 99997; }
+    .popup-overlay { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; background: rgba(0,0,0,0.65); backdrop-filter: blur(3px); padding: 12px; box-sizing: border-box; }
+    .popup-box { background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 12px; width: 100%; max-width: 700px; max-height: 80vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 12px 40px rgba(0,0,0,0.6); box-sizing: border-box; }
+    .popup-header { display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; background: var(--bg-primary); border-bottom: 1px solid var(--border-color); font-weight: bold; color: var(--text-accent); flex-shrink: 0; width: 100%; box-sizing: border-box; }
+    .popup-header button { background: none; border: none; color: var(--text-secondary); font-size: 22px; cursor: pointer; line-height: 1; padding: 0 6px; }
+    .popup-header button:hover { color: #ff4444; }
+    .popup-box #terminalOutput { flex: 1; padding: 12px 16px; overflow-y: auto; font-size: 14px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; background: var(--bg-primary); color: var(--text-primary); min-height: 150px; max-height: 50vh; width: 100%; box-sizing: border-box; }
+    .popup-box #terminalLine { display: flex; align-items: center; padding: 8px 16px; background: var(--bg-secondary); border-top: 1px solid var(--border-color); flex-shrink: 0; width: 100%; box-sizing: border-box; }
+    .popup-box #terminalPrompt { color: var(--text-accent); font-weight: bold; margin-right: 8px; white-space: nowrap; flex-shrink: 0; }
+    .popup-box #terminalInput { flex: 1; min-width: 0; background: transparent; border: none; outline: none; color: var(--text-primary); font-family: var(--font); font-size: 14px; caret-color: var(--text-accent); }
     #customModal input { background:var(--bg-primary); color:var(--text-primary); border:1px solid var(--border-color); border-radius:6px; padding:10px 12px; width:100%; font-family:var(--font); font-size:14px; outline:none; }
     #customModal input:focus { border-color:var(--text-accent); box-shadow:0 0 8px var(--shadow-color); }
     #customModal button { font-family:var(--font); font-size:14px; padding:8px 18px; border-radius:6px; cursor:pointer; transition:0.2s; }
@@ -280,10 +198,46 @@
     #customModal #modalCancel:hover { background:var(--hover-bg); }
     #customModal #modalConfirm { background:var(--text-accent); border:none; color:var(--bg-primary); font-weight:bold; }
     #customModal #modalConfirm:hover { opacity:0.85; }
+
+    /* Стилове за списъка с игри в pop-up */
+    #gamesPopup button:hover {
+      background: var(--hover-bg);
+      border-color: var(--text-accent);
+    }
+    #gamesPopup ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    #gamesPopup li {
+      margin-bottom: 6px;
+    }
+    #gamesPopup li:last-child {
+      margin-bottom: 0;
+    }
+    /* Бутон в страничната лента за отваряне на игри */
+    #gamesList button {
+      width: 100%;
+      text-align: left;
+      padding: 8px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--border-color);
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      font-family: var(--font);
+      font-size: 14px;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    #gamesList button:hover {
+      background: var(--hover-bg);
+      border-color: var(--text-accent);
+    }
   </style>
 
   <script>
   (function() {
+    // Функция за отваряне на линк в нов прозорец (за външни линкове)
     async function openLink(url) {
       if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) {
         try {
@@ -302,6 +256,42 @@
           e.preventDefault();
           openLink(href);
         }
+      }
+    });
+
+    // ---------- ЛОГИКА ЗА ПОП-ЪП НА ИГРИ ----------
+    document.addEventListener('DOMContentLoaded', function() {
+      const openBtn = document.getElementById('openGamesPopupBtn');
+      const popup = document.getElementById('gamesPopup');
+      const closeBtn = document.getElementById('gamesPopupCloseBtn');
+
+      if (openBtn && popup) {
+        // Отваряне
+        openBtn.addEventListener('click', function(e) {
+          e.stopPropagation();
+          popup.style.display = 'flex';
+          document.body.style.overflow = 'hidden';
+        });
+
+        // Затваряне
+        function closePopup() {
+          popup.style.display = 'none';
+          document.body.style.overflow = '';
+        }
+
+        if (closeBtn) closeBtn.addEventListener('click', closePopup);
+
+        // Затваряне при клик върху фона (overlay)
+        popup.addEventListener('click', function(e) {
+          if (e.target === this) closePopup();
+        });
+
+        // Затваряне с ESC
+        document.addEventListener('keydown', function(e) {
+          if (e.key === 'Escape' && popup.style.display === 'flex') {
+            closePopup();
+          }
+        });
       }
     });
   })();

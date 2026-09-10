@@ -1,0 +1,1198 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Мултиплейър Бесеница Pro</title>
+
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    
+    html, body { 
+      width: 100%; height: 100%; overflow: hidden; 
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+      color: #e0e0e0; display: flex; justify-content: center; align-items: center; 
+    }
+    
+    .container { 
+      background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px);
+      width: 100%; max-width: 520px; height: 100%; max-height: 100vh;
+      box-shadow: 0 25px 80px rgba(0,0,0,0.5); overflow: hidden; 
+      display: flex; flex-direction: column; position: relative;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+
+    @media (min-width: 521px) {
+      .container { height: 98vh; max-height: 850px; border-radius: 20px; }
+    }
+    
+    .exit-btn {
+      position: absolute; top: 12px; right: 12px; z-index: 200;
+      background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3);
+      color: #ef4444; padding: 6px 14px; border-radius: 10px; font-size: 12px; font-weight: 600;
+      cursor: pointer; text-decoration: none; display: inline-block;
+    }
+    .exit-btn:hover { background: rgba(239, 68, 68, 0.3); color: #000; }
+    
+    .screen { 
+      padding: 14px; display: flex; flex-direction: column; flex: 1; 
+      min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding-top: 50px;
+    }
+    .screen::-webkit-scrollbar { width: 4px; }
+    .screen::-webkit-scrollbar-thumb { background: #667eea; border-radius: 10px; }
+    
+    .hidden { display: none !important; }
+
+    h1 { 
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      font-size: 22px; text-align: center; margin-bottom: 12px; font-weight: 800; flex-shrink: 0;
+    }
+    
+    .input-group { margin-bottom: 12px; display: flex; flex-direction: column; gap: 4px; flex-shrink: 0; }
+    .input-group label { font-size: 12px; font-weight: 600; color: #334155; }
+    
+    input, button { 
+      padding: 10px 14px; border-radius: 12px; border: 2px solid #e2e8f0; 
+      font-size: 14px; outline: none; color: #1e293b; transition: all 0.2s;
+    }
+    input:focus { border-color: #667eea; box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15); }
+    
+    .btn { 
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #fff; font-weight: 700; border: none; cursor: pointer; text-align: center;
+      padding: 10px 16px; border-radius: 12px; font-size: 14px; flex-shrink: 0;
+      -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn-success { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
+    .btn-danger { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    
+    .room-list { 
+      flex: 1; overflow-y: auto; border: 2px solid #e2e8f0; border-radius: 12px; 
+      padding: 8px; margin-bottom: 10px; min-height: 60px; background: #f8fafc;
+    }
+    .room-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; border-bottom: 1px solid #f1f5f9; }
+    .room-item span { font-weight: 500; color: #1e293b; font-size: 13px; }
+
+    .lobby-header-row {
+      display: flex; justify-content: space-between; align-items: center;
+      background: #f8fafc; padding: 10px 14px; border-radius: 12px; border: 2px solid #e2e8f0; margin-bottom: 10px; flex-shrink: 0;
+    }
+    .lobby-header-row span { font-size: 13px; font-weight: 700; color: #334155; }
+    .player-count-badge { background: #3f51b5; color: white; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+
+    .players-list { 
+      margin-bottom: 10px; font-size: 13px; background: #f8fafc; padding: 10px; 
+      border-radius: 12px; border: 2px solid #e2e8f0; flex-shrink: 0; max-height: 120px; overflow-y: auto;
+    }
+    .players-list strong { color: #334155; display: block; margin-bottom: 4px; font-size: 11px; }
+    .players-list .player-item { padding: 3px 0; color: #475569; font-size: 12px; display: flex; align-items: center; gap: 6px; }
+    .players-list .player-item .status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .status-online { background: #22c55e; }
+    .status-afk { background: #eab308; }
+    .status-offline { background: #ef4444; }
+    .players-list .player-item .host-badge {
+      background: #f59e0b; color: white; padding: 0 8px; border-radius: 10px; font-size: 9px; font-weight: 700;
+    }
+
+    .chat-section { flex: 1; display: flex; flex-direction: column; min-height: 100px; max-height: 180px; margin-bottom: 8px; }
+    .chat-box { 
+      flex: 1; border: 2px solid #e2e8f0; border-radius: 12px; padding: 8px; 
+      overflow-y: auto; background: #f8fafc; margin-bottom: 6px; display: flex; flex-direction: column; gap: 4px; min-height: 50px;
+    }
+    .chat-message { font-size: 12px; background: #fff; padding: 4px 8px; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); word-wrap: break-word; color: #1e293b; }
+    .chat-message span { font-weight: 700; color: #667eea; }
+    .chat-message.system { background: #eff6ff; color: #1e40af; font-style: italic; text-align: center; font-size: 11px; }
+    
+    .chat-input-area { display: flex; gap: 6px; flex-shrink: 0; }
+    .chat-input-area input { flex: 1; padding: 8px 12px; font-size: 13px; min-width: 0; border-radius: 10px; height: 38px; }
+    .chat-input-area button { padding: 8px 14px; font-size: 12px; white-space: nowrap; height: 38px; }
+
+    .word-display { 
+      font-size: clamp(18px, 4.5vw, 26px); font-weight: 800; letter-spacing: clamp(2px, 1vw, 6px);
+      text-align: center; margin: 6px 0; color: #0f172a; word-break: break-all; background: #f8fafc;
+      padding: 10px 8px; border-radius: 12px; border: 2px solid #e2e8f0; min-height: 48px; max-height: 90px;
+      display: flex; align-items: center; justify-content: center; overflow-y: auto; flex-shrink: 0;
+    }
+    
+    .keyboard { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin: 6px 0; flex-shrink: 0; }
+    .key-btn { 
+      background: #e2e8f0; border: none; padding: 8px 0; border-radius: 8px; font-weight: 700; 
+      cursor: pointer; font-size: clamp(12px, 2.5vw, 14px); color: #1e293b; min-height: 38px;
+    }
+    .key-btn:active { transform: scale(0.92); background: #cbd5e1; }
+    .key-btn:disabled { background: #f1f5f9; color: #94a3b8; cursor: not-allowed; opacity: 0.5; }
+
+    .score-board { 
+      font-size: 11px; background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+      padding: 6px 10px; border-radius: 10px; margin-bottom: 6px; border: 1px solid #bfdbfe;
+      font-weight: 600; color: #1e293b; flex-shrink: 0; overflow-x: auto; white-space: nowrap;
+    }
+    
+    .status-text, .timer-text { 
+      text-align: center; font-size: 12px; font-weight: 700; margin-bottom: 4px; padding: 6px 8px; border-radius: 8px; flex-shrink: 0;
+    }
+    .status-text { color: #d97706; background: #fffbeb; border: 1px solid #fde68a; }
+    .timer-text { color: #dc2626; background: #fef2f2; border: 1px solid #fca5a5; }
+    
+    canvas#hangmanCanvas { 
+      display: block; margin: 4px auto; background: #f8fafc; border: 2px solid #e2e8f0; border-radius: 10px; width: 110px; height: 70px; flex-shrink: 0;
+    }
+    
+    .flex-row { display: flex; gap: 8px; margin-top: 8px; flex-shrink: 0; }
+    .flex-row .btn { flex: 1; padding: 10px; font-size: 13px; }
+    .empty-state { text-align: center; color: #94a3b8; font-size: 12px; padding: 15px 0; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 10px; font-weight: 700; background: #667eea; color: white; margin-left: 4px; }
+    .game-info { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; flex-shrink: 0; }
+    #game-turn-info { font-size: 11px; font-weight: 700; color: #475569; }
+    .creator-warning { font-size: 11px; color: #f59e0b; text-align: center; margin-top: 4px; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <a href="index.html" class="exit-btn" onclick="return cleanupBeforeExit()">🚪 Изход</a>
+
+  <!-- МЕНЮ -->
+  <div id="screen-menu" class="screen">
+    <h1>🎯 Мултиплейър Бесеница</h1>
+    <div class="input-group">
+      <label>👤 Твоето име:</label>
+      <input type="text" id="player-name" placeholder="Въведи име..." maxlength="12" value="Играч">
+    </div>
+    <button class="btn" onclick="createRoom()" style="margin-bottom: 12px;">🚀 Създай стая</button>
+    <h2 style="font-size: 13px; color: #475569; margin-bottom: 8px; font-weight: 600;">📋 Налични стаи:</h2>
+    <div id="rooms-container" class="room-list">
+      <div class="empty-state">Няма активни стаи...</div>
+    </div>
+  </div>
+
+  <!-- ЛОБИ -->
+  <div id="screen-lobby" class="screen hidden">
+    <h1 id="lobby-title">🏠 Стая</h1>
+    <div class="lobby-header-row">
+      <span id="lobby-room-name">Стая</span>
+      <div class="player-count-badge">Играчи: <span id="players-count-num">1</span></div>
+    </div>
+    <div class="players-list">
+      <strong>👥 Участници в стаята:</strong>
+      <div id="lobby-players"></div>
+    </div>
+    <div id="creator-status" class="creator-warning"></div>
+    <div class="chat-section">
+      <h3 style="font-size: 11px; color: #64748b; margin-bottom: 4px; font-weight: 600;">💬 Чат в стаята</h3>
+      <div id="lobby-chat" class="chat-box"></div>
+      <div class="chat-input-area">
+        <input type="text" id="chat-input" placeholder="Съобщение..." onkeypress="handleChatKey(event)">
+        <button class="btn" onclick="sendChatMessage()">📨</button>
+      </div>
+    </div>
+    <div class="flex-row">
+      <button id="start-game-btn" class="btn btn-success" onclick="startFirstRound()">🎮 Старт на играта</button>
+      <button class="btn btn-danger" onclick="leaveRoom()">🚪 Напусни</button>
+    </div>
+  </div>
+
+  <!-- ИЗМИСЛЯНЕ -->
+  <div id="screen-chooser" class="screen hidden">
+    <h1>✍️ Измисли дума</h1>
+    <div class="timer-text" id="chooser-timer">⏱️ Оставащо време: 30s</div>
+    <div class="status-text">🎯 Твой ред е да измислиш дума!</div>
+    <div class="input-group" style="margin-top: 10px;">
+      <label>📝 Въведи дума:</label>
+      <input type="text" id="secret-word-input" placeholder="програмиране" style="font-size: 16px; text-align: center;" oninput="convertToCyrillic(this)">
+    </div>
+    <button class="btn btn-success" onclick="submitSecretWord()">✅ Пусни към играчите</button>
+    <button class="btn btn-danger" onclick="leaveRoom()" style="margin-top: 8px;">🚪 Напусни играта</button>
+  </div>
+
+  <!-- ИГРА -->
+  <div id="screen-game" class="screen hidden">
+    <div class="game-info">
+      <span id="game-turn-info">👤 Измисля: ...</span>
+      <button class="btn btn-danger" onclick="leaveRoom()" style="padding: 4px 12px; font-size: 11px;">🚪 Напусни</button>
+    </div>
+    <div id="score-board" class="score-board">📊 Точки: ...</div>
+    <div class="timer-text" id="game-timer">⏱️ 2:00</div>
+    <div class="status-text" id="game-info-banner" style="font-size: 11px; color: #2563eb;">🎯 Познавай!</div>
+    <canvas id="hangmanCanvas" width="120" height="85"></canvas>
+    <div class="word-display" id="word-container">_ _ _</div>
+    <div class="keyboard" id="keyboard"></div>
+    <div class="chat-section">
+      <h3 style="font-size: 11px; color: #64748b; margin-bottom: 4px; font-weight: 600;">💬 Чат на играта</h3>
+      <div id="game-chat" class="chat-box"></div>
+      <div class="chat-input-area">
+        <input type="text" id="game-chat-input" placeholder="Съобщение..." onkeypress="handleGameChatKey(event)">
+        <button class="btn" onclick="sendGameChatMessage()">📨</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyAGF9BsM0_OMADMYiTIpIFQ3rlWPQIcP-M",
+  authDomain: "atoms-32b0d.firebaseapp.com",
+  databaseURL: "https://atoms-32b0d-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "atoms-32b0d",
+  storageBucket: "atoms-32b0d.appspot.com",
+  messagingSenderId: "358321648052",
+  appId: "1:358321648052:web:2f58f230f8b1384121c2e1",
+  measurementId: "G-MFJNLQMEH2"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+let afk30 = null;
+let afk120 = null;
+
+const CONFIG = {
+  CHOOSER_TIMEOUT: 30000,
+  ROUND_TIMEOUT: 120000,
+  MAX_WRONG: 6,
+};
+
+const STATE = {
+  myPlayerId: 'player_' + Math.random().toString(36).substr(2, 9),
+  myName: "Играч",
+  currentRoomId: null,
+  roomRef: null,
+  listeners: { room: null, players: null, chat: null, playerGuesses: null },
+  game: { myGuesses: '', myWrongCount: 0, hasWon: false, isEliminated: false },
+  isExiting: false,
+  isCreator: false,
+  processingHostChange: false,
+  hostChangeHandled: false
+};
+
+// ============================================================
+// 🔄 RECONNECT HANDLER
+// ============================================================
+function setupReconnectHandler() {
+  const connectedRef = firebase.database().ref('.info/connected');
+  connectedRef.on('value', snap => {
+    if (snap.val() === true && STATE.currentRoomId && STATE.roomRef) {
+      STATE.roomRef.child('players/' + STATE.myPlayerId).update({
+        isOnline: true,
+        isAFK: false,
+        reconnectedAt: firebase.database.ServerValue.TIMESTAMP
+      });
+    }
+  });
+}
+
+// ============================================================
+// 🧹 ROOM CLEANUP
+// ============================================================
+function cleanupStaleRooms() {
+  const staleThreshold = 60 * 60 * 1000;
+  const now = Date.now();
+  
+  db.ref('hangman_rooms').once('value', snapshot => {
+    const rooms = snapshot.val() || {};
+    let deletePromises = [];
+    
+    Object.keys(rooms).forEach(roomId => {
+      const room = rooms[roomId];
+      const playerCount = room.players ? Object.keys(room.players).length : 0;
+      
+      if (playerCount === 0) {
+        deletePromises.push(db.ref('hangman_rooms/' + roomId).remove());
+        return;
+      }
+      
+      if ((room.status === 'chooser' || room.status === 'playing')) {
+        const lastActivity = room.lastActivity || room.createdAt || 0;
+        if (now - lastActivity > staleThreshold) {
+          deletePromises.push(db.ref('hangman_rooms/' + roomId).remove());
+        }
+      }
+    });
+    
+    if (deletePromises.length > 0) {
+      Promise.all(deletePromises)
+        .then(() => console.log(`✅ Почистени ${deletePromises.length} стаи`))
+        .catch(error => console.error('❌ Грешка при почистване:', error));
+    }
+  });
+}
+
+// ============================================================
+// 🔄 HELPER FUNCTIONS
+// ============================================================
+function convertToCyrillic(input) {
+  const map = {
+    'a':'а','b':'б','v':'в','g':'г','d':'д','e':'е','z':'з','i':'и','j':'й','k':'к','l':'л','m':'м',
+    'n':'н','o':'о','p':'п','r':'р','s':'с','t':'т','u':'у','f':'ф','h':'х','c':'ц','y':'ъ','x':'х',
+    'q':'я','w':'в','A':'А','B':'Б','V':'В','G':'Г','D':'Д','E':'Е','Z':'З','I':'И','J':'Й','K':'К',
+    'L':'Л','M':'М','N':'Н','O':'О','P':'П','R':'Р','S':'С','T':'Т','U':'У','F':'Ф','H':'Х','C':'Ц',
+    'Y':'Ъ','X':'Х','Q':'Я','W':'В'
+  };
+  let res = '';
+  for (let char of input.value) res += map[char] || char;
+  input.value = res;
+}
+
+function stopAllTimers() {
+  if (afk30) { clearInterval(afk30); afk30 = null; }
+  if (afk120) { clearInterval(afk120); afk120 = null; }
+}
+
+function isPlayerStillInGame(playerId) {
+  return new Promise((resolve) => {
+    if (!STATE.roomRef) { resolve(false); return; }
+    STATE.roomRef.child('players/' + playerId).once('value', snapshot => {
+      resolve(snapshot.exists());
+    });
+  });
+}
+
+function getOnlinePlayers(playersObj) {
+  const keys = Object.keys(playersObj || {});
+  return keys.filter(id => playersObj[id].isOnline !== false);
+}
+
+// ============================================================
+// 🏠 ROOM MANAGEMENT
+// ============================================================
+function cleanupBeforeExit() {
+  if (STATE.isExiting) return true;
+  STATE.isExiting = true;
+  
+  stopAllTimers();
+  
+  if (STATE.currentRoomId && STATE.roomRef) {
+    STATE.roomRef.child('players/' + STATE.myPlayerId).onDisconnect().cancel();
+  }
+  
+  Object.keys(STATE.listeners).forEach(k => { 
+    if (STATE.listeners[k]) { 
+      STATE.listeners[k].off(); 
+      STATE.listeners[k] = null; 
+    } 
+  });
+  
+  if (STATE.currentRoomId && STATE.roomRef) {
+    STATE.roomRef.child('players/' + STATE.myPlayerId).remove()
+      .then(() => {
+        STATE.roomRef.child('players').once('value', snapshot => {
+          const players = snapshot.val() || {};
+          const count = Object.keys(players).length;
+          if (count === 0) {
+            STATE.roomRef.remove();
+          }
+        });
+      })
+      .catch(() => {});
+  }
+  
+  return true;
+}
+
+function createRoom() {
+  STATE.myName = document.getElementById('player-name').value.trim() || "Играч";
+  STATE.currentRoomId = 'room_' + Math.random().toString(36).substr(2, 7);
+  STATE.roomRef = db.ref('hangman_rooms/' + STATE.currentRoomId);
+  STATE.isCreator = true;
+  STATE.hostChangeHandled = false;
+  STATE.processingHostChange = false;
+
+  const initialData = {
+    creatorId: STATE.myPlayerId,
+    creatorName: STATE.myName,
+    status: 'lobby',
+    roomMembers: 1,
+    roundActionFlag: false,
+    createdAt: firebase.database.ServerValue.TIMESTAMP,
+    lastActivity: firebase.database.ServerValue.TIMESTAMP,
+    players: { 
+      [STATE.myPlayerId]: { 
+        name: STATE.myName, 
+        score: 0,
+        isOnline: true,
+        isAFK: false
+      } 
+    }
+  };
+
+  STATE.roomRef.set(initialData).then(() => {
+    enterLobbyView();
+  });
+}
+
+function joinRoom(rId) {
+  STATE.myName = document.getElementById('player-name').value.trim() || "Играч";
+  STATE.currentRoomId = rId;
+  STATE.roomRef = db.ref('hangman_rooms/' + STATE.currentRoomId);
+  STATE.isCreator = false;
+  STATE.hostChangeHandled = false;
+  STATE.processingHostChange = false;
+
+  STATE.roomRef.child('players/' + STATE.myPlayerId).set({ 
+    name: STATE.myName, 
+    score: 0,
+    isOnline: true,
+    isAFK: false
+  }).then(() => {
+    enterLobbyView();
+  });
+}
+
+function leaveRoom() {
+  if (STATE.isExiting || !STATE.currentRoomId || !STATE.roomRef) return;
+  STATE.isExiting = true;
+  
+  stopAllTimers();
+  
+  if (STATE.currentRoomId && STATE.roomRef) {
+    STATE.roomRef.child('players/' + STATE.myPlayerId).onDisconnect().cancel();
+  }
+  
+  Object.keys(STATE.listeners).forEach(k => { 
+    if (STATE.listeners[k]) { 
+      STATE.listeners[k].off(); 
+      STATE.listeners[k] = null; 
+    } 
+  });
+  
+  STATE.roomRef.child('players/' + STATE.myPlayerId).remove()
+    .then(() => {
+      STATE.roomRef.child('players').once('value', snapshot => {
+        const players = snapshot.val() || {};
+        const count = Object.keys(players).length;
+        
+        if (count === 0) {
+          STATE.roomRef.remove();
+        } else {
+          STATE.roomRef.once('value', snap => {
+            const data = snap.val();
+            if (data && data.creatorId === STATE.myPlayerId && count > 0 && !STATE.processingHostChange) {
+              STATE.processingHostChange = true;
+              const newCreatorId = Object.keys(players)[0];
+              STATE.roomRef.update({
+                creatorId: newCreatorId,
+                creatorName: players[newCreatorId].name
+              }).then(() => {
+                STATE.roomRef.child('chat').push({
+                  name: 'Система',
+                  text: `👑 ${players[newCreatorId].name} е новият хостващ играч!`,
+                  system: true
+                });
+                STATE.processingHostChange = false;
+              });
+            }
+          });
+        }
+        
+        document.getElementById('screen-lobby').classList.add('hidden');
+        document.getElementById('screen-chooser').classList.add('hidden');
+        document.getElementById('screen-game').classList.add('hidden');
+        document.getElementById('screen-menu').classList.remove('hidden');
+        STATE.currentRoomId = null;
+        STATE.roomRef = null;
+        STATE.isCreator = false;
+        STATE.isExiting = false;
+      });
+    })
+    .catch(() => {
+      STATE.isExiting = false;
+    });
+}
+
+function enterLobbyView() {
+  document.getElementById('screen-menu').classList.add('hidden');
+  document.getElementById('screen-chooser').classList.add('hidden');
+  document.getElementById('screen-game').classList.add('hidden');
+  document.getElementById('screen-lobby').classList.remove('hidden');
+  
+  document.getElementById('lobby-title').textContent = `🏠 Стая`;
+  document.getElementById('lobby-room-name').textContent = `Стая: ${STATE.currentRoomId}`;
+
+  STATE.roomRef.child('players/' + STATE.myPlayerId).onDisconnect().update({
+    isOnline: false,
+    isAFK: true,
+    disconnectedAt: firebase.database.ServerValue.TIMESTAMP
+  });
+
+  if (STATE.listeners.players) STATE.listeners.players.off();
+  STATE.listeners.players = STATE.roomRef.child('players');
+  STATE.listeners.players.on('value', snapshot => {
+    const players = snapshot.val() || {};
+    const listDiv = document.getElementById('lobby-players');
+    listDiv.innerHTML = '';
+    let count = 0;
+    
+    STATE.roomRef.child('creatorId').once('value', creatorSnap => {
+      const creatorId = creatorSnap.val();
+      
+      Object.keys(players).forEach(pId => {
+        count++;
+        const p = players[pId];
+        let statusClass = 'status-online';
+        if (p.isOnline === false) statusClass = 'status-offline';
+        else if (p.isAFK) statusClass = 'status-afk';
+        
+        const isCreator = (pId === creatorId);
+        
+        listDiv.innerHTML += `
+          <div class="player-item">
+            <span class="status-dot ${statusClass}"></span>
+            👤 ${p.name} (${p.score || 0} т.)
+            ${pId === STATE.myPlayerId ? ' <strong style="color:#667eea;">(ти)</strong>' : ''}
+            ${isCreator ? ' <span class="host-badge">👑 Хост</span>' : ''}
+          </div>
+        `;
+      });
+      
+      document.getElementById('players-count-num').textContent = count;
+      
+      STATE.isCreator = (creatorId === STATE.myPlayerId);
+      const startBtn = document.getElementById('start-game-btn');
+      if (STATE.isCreator && count >= 2) {
+        startBtn.disabled = false;
+        startBtn.textContent = '🎮 Старт на играта';
+      } else if (STATE.isCreator && count < 2) {
+        startBtn.disabled = true;
+        startBtn.textContent = `⏳ Чакаме още ${2 - count} играчи...`;
+      } else {
+        startBtn.disabled = true;
+        startBtn.textContent = '👑 Само създателят стартира';
+      }
+      
+      const statusDiv = document.getElementById('creator-status');
+      if (STATE.isCreator) {
+        statusDiv.textContent = '👑 Ти си създателят на стаята! Само ти можеш да стартираш играта.';
+        statusDiv.style.color = '#10b981';
+      } else {
+        const creatorName = players[creatorId]?.name || 'Няма';
+        statusDiv.textContent = `👑 Създател: ${creatorName}`;
+        statusDiv.style.color = '#f59e0b';
+      }
+    });
+    
+    if (count === 0) {
+      STATE.roomRef.remove();
+      document.getElementById('screen-lobby').classList.add('hidden');
+      document.getElementById('screen-menu').classList.remove('hidden');
+      if (STATE.listeners.room) STATE.listeners.room.off();
+      if (STATE.listeners.players) STATE.listeners.players.off();
+      if (STATE.listeners.chat) STATE.listeners.chat.off();
+      STATE.currentRoomId = null;
+      STATE.roomRef = null;
+      return;
+    }
+
+    STATE.roomRef.update({ roomMembers: count });
+  });
+
+  if (STATE.listeners.chat) STATE.listeners.chat.off();
+  STATE.listeners.chat = STATE.roomRef.child('chat');
+  STATE.listeners.chat.on('child_added', snapshot => {
+    const msg = snapshot.val();
+    if (msg) {
+      appendMessage('lobby-chat', msg.name, msg.text, msg.system);
+      appendMessage('game-chat', msg.name, msg.text, msg.system);
+    }
+  });
+
+  if (STATE.listeners.room) STATE.listeners.room.off();
+  STATE.listeners.room = STATE.roomRef;
+  STATE.listeners.room.on('value', snapshot => {
+    const data = snapshot.val();
+    if (!data) {
+      document.getElementById('screen-lobby').classList.add('hidden');
+      document.getElementById('screen-menu').classList.remove('hidden');
+      STATE.currentRoomId = null;
+      STATE.roomRef = null;
+      return;
+    }
+    handleGlobalState(data);
+  });
+}
+
+// ============================================================
+// 📨 CHAT FUNCTIONS
+// ============================================================
+function sendChatMessage() {
+  const input = document.getElementById('chat-input');
+  if (!input.value.trim()) return;
+  STATE.roomRef.child('chat').push({ name: STATE.myName, text: input.value.trim(), system: false });
+  input.value = '';
+}
+
+function handleChatKey(e) { if (e.key === 'Enter') sendChatMessage(); }
+
+function sendGameChatMessage() {
+  const input = document.getElementById('game-chat-input');
+  if (!input.value.trim()) return;
+  STATE.roomRef.child('chat').push({ name: STATE.myName, text: input.value.trim(), system: false });
+  input.value = '';
+}
+
+function handleGameChatKey(e) { if (e.key === 'Enter') sendGameChatMessage(); }
+
+function appendMessage(containerId, sender, text, isSystem = false) {
+  const box = document.getElementById(containerId);
+  if (!box) return;
+  const div = document.createElement('div');
+  div.className = isSystem ? 'chat-message system' : 'chat-message';
+  div.innerHTML = isSystem ? text : `<span>${sender}:</span> ${text}`;
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+}
+
+// ============================================================
+// 🎮 GAME LOGIC
+// ============================================================
+function startFirstRound() {
+  isPlayerStillInGame(STATE.myPlayerId).then((stillInGame) => {
+    if (!stillInGame) {
+      alert('Вие вече не сте в стаята!');
+      return;
+    }
+    
+    STATE.roomRef.once('value', snapshot => {
+      const data = snapshot.val();
+      if (!data) return;
+      
+      if (data.creatorId !== STATE.myPlayerId) {
+        alert('👑 Само създателят на стаята може да стартира играта!');
+        return;
+      }
+      
+      const playersObj = data.players || {};
+      const onlineKeys = getOnlinePlayers(playersObj);
+      if (onlineKeys.length < 2) {
+        alert('Нужни са поне 2 активни играчи за старт!');
+        return;
+      }
+      
+      const updates = {
+        status: 'chooser',
+        currentChooserIndex: 0,
+        chooserPlayerId: onlineKeys[0],
+        chooserName: playersObj[onlineKeys[0]].name,
+        chooserDeadline: Date.now() + CONFIG.CHOOSER_TIMEOUT,
+        roundActionFlag: false,
+        roomMembers: onlineKeys.length,
+        lastActivity: firebase.database.ServerValue.TIMESTAMP
+      };
+      
+      STATE.roomRef.update(updates);
+    });
+  });
+}
+
+function handleGlobalState(data) {
+  const status = data.status;
+  if (!status) return;
+
+  stopAllTimers();
+
+  if (status === 'lobby') {
+    document.getElementById('screen-chooser').classList.add('hidden');
+    document.getElementById('screen-game').classList.add('hidden');
+    document.getElementById('screen-lobby').classList.remove('hidden');
+    return;
+  }
+
+  document.getElementById('screen-menu').classList.add('hidden');
+  document.getElementById('screen-lobby').classList.add('hidden');
+
+  // Проверка за нов хост - само ако не сме в процес на обработка
+  if ((status === 'chooser' || status === 'playing') && data.creatorId && !STATE.processingHostChange) {
+    const players = data.players || {};
+    const creatorStillInGame = players[data.creatorId] !== undefined;
+    
+    if (!creatorStillInGame && Object.keys(players).length > 0 && !STATE.hostChangeHandled) {
+      STATE.hostChangeHandled = true;
+      STATE.processingHostChange = true;
+      
+      const onlineKeys = getOnlinePlayers(players);
+      if (onlineKeys.length > 0) {
+        const newHostId = onlineKeys[0];
+        const newHostName = players[newHostId]?.name || 'Неизвестен';
+        
+        STATE.roomRef.update({
+          creatorId: newHostId,
+          creatorName: newHostName
+        }).then(() => {
+          STATE.roomRef.child('chat').push({
+            name: 'Система',
+            text: `👑 ${newHostName} е новият хостващ играч!`,
+            system: true
+          });
+          STATE.processingHostChange = false;
+        });
+        
+        setTimeout(() => {
+          STATE.hostChangeHandled = false;
+        }, 3000);
+      } else {
+        STATE.processingHostChange = false;
+      }
+    }
+  }
+
+  // Проверка дали chooser-ът е онлайн
+  const players = data.players || {};
+  const chooserId = data.chooserPlayerId;
+  const onlineKeys = getOnlinePlayers(players);
+  
+  if (chooserId && players[chooserId] && players[chooserId].isOnline === false) {
+    if (onlineKeys.length > 1) {
+      let currentIndex = data.currentChooserIndex || 0;
+      let currentIndexInOnline = onlineKeys.indexOf(chooserId);
+      if (currentIndexInOnline === -1) currentIndexInOnline = 0;
+      
+      let nextIndex = (currentIndexInOnline + 1) % onlineKeys.length;
+      const nextId = onlineKeys[nextIndex];
+      
+      STATE.roomRef.update({
+        chooserPlayerId: nextId,
+        chooserName: players[nextId].name,
+        currentChooserIndex: Object.keys(players).indexOf(nextId),
+        roundActionFlag: false,
+        secretWord: null,
+        playerGuesses: null,
+        lastActivity: firebase.database.ServerValue.TIMESTAMP
+      });
+      
+      STATE.roomRef.child('chat').push({
+        name: 'Система',
+        text: `⚠️ ${players[chooserId]?.name || 'Играч'} напусна. ${players[nextId].name} измисля нова дума.`,
+        system: true
+      });
+    } else if (onlineKeys.length === 1) {
+      // Само един играч остана - връщаме в лобито
+      STATE.roomRef.update({
+        status: 'lobby',
+        roundActionFlag: false,
+        secretWord: null,
+        playerGuesses: null
+      });
+    }
+    return;
+  }
+
+  if (status === 'chooser') {
+    document.getElementById('screen-game').classList.add('hidden');
+    document.getElementById('screen-chooser').classList.remove('hidden');
+    
+    const chooserId_local = data.chooserPlayerId;
+    const chooserName = data.chooserName || "";
+
+    if (chooserId_local === STATE.myPlayerId) {
+      document.getElementById('secret-word-input').value = '';
+      document.getElementById('chooser-timer').textContent = `⏱️ Оставащо време: 30s`;
+    } else {
+      document.getElementById('screen-chooser').classList.add('hidden');
+      document.getElementById('screen-game').classList.remove('hidden');
+      document.getElementById('game-info-banner').textContent = `⏳ Изчакваме ${chooserName} да измисли дума...`;
+      document.getElementById('word-container').textContent = "...";
+      drawHangman(0);
+      document.getElementById('keyboard').innerHTML = '<div class="empty-state" style="grid-column: span 7; font-size: 11px;">⏳ Изчаквайте измислянето...</div>';
+      document.getElementById('game-turn-info').textContent = `👤 Измисля: ${chooserName}`;
+    }
+    setupChooserTimer(data.chooserDeadline);
+
+  } else if (status === 'playing') {
+    document.getElementById('screen-chooser').classList.add('hidden');
+    document.getElementById('screen-game').classList.remove('hidden');
+    
+    document.getElementById('game-info-banner').textContent = "🎯 Познавай буквите!";
+    document.getElementById('game-turn-info').textContent = `👤 Измисля: ${data.chooserName}`;
+    
+    if (data.players) updateScoreBoard(data.players);
+    setupGameRound(data);
+    setupRoundTimer(data.roundDeadline);
+  }
+}
+
+function setupChooserTimer(deadline) {
+  stopAllTimers();
+  const timerEl = document.getElementById('chooser-timer');
+  
+  afk30 = setInterval(() => {
+    const timeLeft = Math.max(0, Math.floor((deadline - Date.now()) / 1000));
+    timerEl.textContent = `⏱️ Оставащо време: ${timeLeft}s`;
+    
+    if (timeLeft <= 0) {
+      clearInterval(afk30);
+      afk30 = null;
+      STATE.roomRef.transaction(current => {
+        if (current && current.status === 'chooser' && !current.roundActionFlag) {
+          current.roundActionFlag = true;
+          return current;
+        }
+        return;
+      }, (error, committed) => {
+        if (committed) {
+          STATE.roomRef.child('chat').push({ name: 'Система', text: '⏰ Времето за измисляне на дума изтече!', system: true });
+          rotateChooserGlobal();
+        }
+      });
+    }
+  }, 1000);
+}
+
+function setupRoundTimer(deadline) {
+  stopAllTimers();
+  const timerEl = document.getElementById('game-timer');
+  
+  afk120 = setInterval(() => {
+    const timeLeft = Math.max(0, Math.floor((deadline - Date.now()) / 1000));
+    const mins = Math.floor(timeLeft / 60);
+    const secs = timeLeft % 60;
+    timerEl.textContent = `⏱️ ${mins}:${secs < 10 ? '0' : ''}${secs}`;
+    
+    if (timeLeft <= 0) {
+      clearInterval(afk120);
+      afk120 = null;
+      STATE.roomRef.transaction(current => {
+        if (current && current.status === 'playing' && !current.roundActionFlag) {
+          current.roundActionFlag = true;
+          return current;
+        }
+        return;
+      }, (error, committed) => {
+        if (committed) {
+          STATE.roomRef.child('chat').push({ name: 'Система', text: '⏰ Времето за познаване изтече!', system: true });
+          rotateChooserGlobal();
+        }
+      });
+    }
+  }, 1000);
+}
+
+function submitSecretWord() {
+  const input = document.getElementById('secret-word-input');
+  const word = input.value.trim().toLowerCase();
+  if (!word || !/^[а-я\s]+$/i.test(word)) {
+    alert('Моля въведи валидна дума на кирилица!');
+    return;
+  }
+
+  const now = Date.now();
+  const updates = {
+    secretWord: word,
+    playerGuesses: null,
+    status: 'playing',
+    roundActionFlag: false,
+    roundDeadline: now + CONFIG.ROUND_TIMEOUT,
+    lastActivity: firebase.database.ServerValue.TIMESTAMP
+  };
+  STATE.roomRef.update(updates);
+  input.value = '';
+}
+
+function setupGameRound(roomData) {
+  const secretWord = roomData.secretWord || "";
+  const chooserId = roomData.chooserPlayerId;
+  const playerGuesses = roomData.playerGuesses || {};
+  
+  const myData = playerGuesses[STATE.myPlayerId] || { guessed: "", wrongCount: 0, hasWon: false, isEliminated: false };
+  STATE.game.myGuesses = myData.guessed || '';
+  STATE.game.myWrongCount = myData.wrongCount || 0;
+  STATE.game.hasWon = myData.hasWon || false;
+  STATE.game.isEliminated = myData.isEliminated || false;
+
+  drawHangman(STATE.game.myWrongCount);
+  
+  let displayString = "";
+  let myWordWon = true;
+  for (let i = 0; i < secretWord.length; i++) {
+    const char = secretWord[i];
+    if (char === ' ') displayString += " / ";
+    else if (STATE.game.myGuesses.includes(char)) displayString += char.toUpperCase() + " ";
+    else { displayString += "_ "; myWordWon = false; }
+  }
+  document.getElementById('word-container').textContent = displayString.trim();
+
+  if (myWordWon && secretWord && !STATE.game.hasWon && chooserId !== STATE.myPlayerId && !roomData.roundActionFlag) {
+    attemptWin(secretWord);
+    return;
+  }
+
+  if (STATE.game.myWrongCount >= CONFIG.MAX_WRONG && !STATE.game.isEliminated) {
+    STATE.roomRef.child(`playerGuesses/${STATE.myPlayerId}/isEliminated`).set(true);
+    STATE.game.isEliminated = true;
+    
+    setTimeout(() => {
+      STATE.roomRef.once('value', snap => {
+        const d = snap.val();
+        if (d && d.status === 'playing' && !d.roundActionFlag) {
+          const players = d.players || {};
+          const totalPlayers = Object.keys(players).length;
+          const guessingCount = totalPlayers - 1;
+          const guesses = d.playerGuesses || {};
+          let elimCount = 0;
+          Object.keys(guesses).forEach(pId => {
+            if (pId !== d.chooserPlayerId && guesses[pId].isEliminated) elimCount++;
+          });
+          if (guessingCount > 0 && elimCount >= guessingCount) {
+            STATE.roomRef.transaction(current => {
+              if (current && !current.roundActionFlag) {
+                current.roundActionFlag = true;
+                return current;
+              }
+              return;
+            }, (err, comm) => {
+              if (comm) {
+                STATE.roomRef.child('chat').push({ name: 'Система', text: '❌ Всички играчи изчерпаха опитите си!', system: true });
+                rotateChooserGlobal();
+              }
+            });
+          }
+        }
+      });
+    }, 400);
+  }
+
+  updateKeyboard(chooserId, roomData.roundActionFlag, STATE.game.myWrongCount, STATE.game.myGuesses);
+  setupPlayerGuessesListener();
+}
+
+function attemptWin(secretWord) {
+  isPlayerStillInGame(STATE.myPlayerId).then((stillInGame) => {
+    if (!stillInGame) return;
+    
+    STATE.roomRef.once('value', snapshot => {
+      const data = snapshot.val();
+      if (!data || data.roundActionFlag) return;
+      
+      STATE.roomRef.transaction(current => {
+        if (current && !current.roundActionFlag) {
+          current.roundActionFlag = true;
+          return current;
+        }
+        return;
+      }, (error, committed) => {
+        if (committed) {
+          finishRound(secretWord);
+        }
+      });
+    });
+  });
+}
+
+function finishRound(secretWord) {
+  STATE.game.hasWon = true;
+  STATE.roomRef.child(`playerGuesses/${STATE.myPlayerId}/hasWon`).set(true);
+
+  STATE.roomRef.child('players/' + STATE.myPlayerId).transaction(cur => {
+    if (cur) cur.score = (cur.score || 0) + 1;
+    return cur;
+  });
+
+  STATE.roomRef.child('chat').push({
+    name: 'Система',
+    text: `🎉 ${STATE.myName} позна думата "${secretWord.toUpperCase()}" и печели точка!`,
+    system: true
+  });
+
+  setTimeout(() => {
+    rotateChooserGlobal();
+  }, 1500);
+}
+
+function setupPlayerGuessesListener() {
+  if (STATE.listeners.playerGuesses) STATE.listeners.playerGuesses.off();
+  STATE.listeners.playerGuesses = STATE.roomRef.child('playerGuesses');
+  STATE.listeners.playerGuesses.on('value', () => {
+    STATE.roomRef.once('value', snap => {
+      const roomData = snap.val();
+      if (roomData && roomData.status === 'playing') setupGameRound(roomData);
+    });
+  });
+}
+
+function updateKeyboard(chooserId, roundEnded, wrongCount, guessed) {
+  const kb = document.getElementById('keyboard');
+  if (chooserId === STATE.myPlayerId) {
+    kb.innerHTML = '<div class="empty-state" style="grid-column: span 7; font-size: 11px;">✍️ Ти си авторът на думата</div>';
+  } else if (roundEnded) {
+    kb.innerHTML = '<div class="empty-state" style="grid-column: span 7; color: #16a34a; font-size: 11px;">🏆 Рундът приключи! Изчакване...</div>';
+  } else if (wrongCount >= CONFIG.MAX_WRONG) {
+    kb.innerHTML = '<div class="empty-state" style="grid-column: span 7; color: #dc2626; font-size: 11px;">💀 Изчерпа опитите си!</div>';
+  } else if (STATE.game.hasWon) {
+    kb.innerHTML = '<div class="empty-state" style="grid-column: span 7; color: #10b981; font-size: 11px;">🎉 Позна думата! Изчакай другите...</div>';
+  } else {
+    buildKeyboard(guessed);
+  }
+}
+
+function buildKeyboard(guessed) {
+  const kb = document.getElementById('keyboard');
+  if (!kb) return;
+  kb.innerHTML = '';
+  "абвгдежзийклмнопрстуфхцчшщъьюя".split('').forEach(letter => {
+    const btn = document.createElement('button');
+    btn.className = 'key-btn';
+    btn.textContent = letter.toUpperCase();
+    if (guessed && guessed.includes(letter)) btn.disabled = true;
+    else btn.onclick = () => makeGuess(letter);
+    kb.appendChild(btn);
+  });
+}
+
+function makeGuess(letter) {
+  isPlayerStillInGame(STATE.myPlayerId).then((stillInGame) => {
+    if (!stillInGame) {
+      console.log('❌ Играчът вече не е в играта!');
+      return;
+    }
+    
+    STATE.roomRef.once('value', snapshot => {
+      const data = snapshot.val();
+      if (!data || data.status !== 'playing' || data.roundActionFlag) return;
+      if (data.chooserPlayerId === STATE.myPlayerId) return;
+      if (STATE.game.myWrongCount >= CONFIG.MAX_WRONG || STATE.game.hasWon) return;
+
+      const secretWord = data.secretWord || "";
+      const guessed = STATE.game.myGuesses || '';
+      let wrong = STATE.game.myWrongCount || 0;
+
+      if (guessed.includes(letter)) return;
+      const newGuessed = guessed + letter;
+
+      if (!secretWord.includes(letter)) wrong += 1;
+
+      STATE.roomRef.child(`playerGuesses/${STATE.myPlayerId}`).update({
+        guessed: newGuessed,
+        wrongCount: wrong
+      });
+    });
+  });
+}
+
+function updateScoreBoard(players) {
+  const scoreBoard = document.getElementById('score-board');
+  if (!scoreBoard) return;
+  let text = '📊 ';
+  const arr = Object.values(players || {});
+  arr.forEach((p, i) => { text += `${p.name}: ${p.score || 0}т${i < arr.length - 1 ? ' | ' : ''}`; });
+  scoreBoard.textContent = text;
+}
+
+function drawHangman(errors) {
+  const canvas = document.getElementById('hangmanCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.strokeStyle = '#334155'; ctx.lineWidth = 2.5; ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(15, 75); ctx.lineTo(60, 75);
+  ctx.moveTo(30, 75); ctx.lineTo(30, 10);
+  ctx.moveTo(30, 10); ctx.lineTo(70, 10);
+  ctx.moveTo(70, 10); ctx.lineTo(70, 22);
+  ctx.stroke();
+  if (errors >= 1) { ctx.beginPath(); ctx.arc(70, 30, 7, 0, Math.PI * 2); ctx.stroke(); }
+  if (errors >= 2) { ctx.beginPath(); ctx.moveTo(70, 37); ctx.lineTo(70, 55); ctx.stroke(); }
+  if (errors >= 3) { ctx.beginPath(); ctx.moveTo(70, 42); ctx.lineTo(58, 50); ctx.stroke(); }
+  if (errors >= 4) { ctx.beginPath(); ctx.moveTo(70, 42); ctx.lineTo(82, 50); ctx.stroke(); }
+  if (errors >= 5) { ctx.beginPath(); ctx.moveTo(70, 55); ctx.lineTo(59, 68); ctx.stroke(); }
+  if (errors >= 6) { ctx.beginPath(); ctx.moveTo(70, 55); ctx.lineTo(81, 68); ctx.stroke(); }
+}
+
+function rotateChooserGlobal() {
+  stopAllTimers();
+
+  STATE.roomRef.once('value', snapshot => {
+    const data = snapshot.val();
+    if (!data) return;
+
+    const playersObj = data.players || {};
+    const onlineKeys = getOnlinePlayers(playersObj);
+    
+    if (onlineKeys.length < 2) {
+      if (onlineKeys.length === 0) {
+        STATE.roomRef.remove();
+        document.getElementById('screen-lobby').classList.add('hidden');
+        document.getElementById('screen-menu').classList.remove('hidden');
+        STATE.currentRoomId = null;
+        STATE.roomRef = null;
+      } else {
+        STATE.roomRef.update({ 
+          status: 'lobby', 
+          roundActionFlag: false,
+          secretWord: null,
+          playerGuesses: null
+        });
+        document.getElementById('screen-chooser').classList.add('hidden');
+        document.getElementById('screen-game').classList.add('hidden');
+        document.getElementById('screen-lobby').classList.remove('hidden');
+      }
+      return;
+    }
+    
+    let currentIndex = data.currentChooserIndex || 0;
+    const currentChooser = data.chooserPlayerId;
+    let currentIndexInOnline = onlineKeys.indexOf(currentChooser);
+    if (currentIndexInOnline === -1) currentIndexInOnline = 0;
+    
+    let nextIndex = (currentIndexInOnline + 1) % onlineKeys.length;
+    const nextId = onlineKeys[nextIndex];
+    const now = Date.now();
+    
+    const updates = {
+      status: 'chooser',
+      currentChooserIndex: Object.keys(playersObj).indexOf(nextId),
+      chooserPlayerId: nextId,
+      chooserName: playersObj[nextId].name,
+      secretWord: null,
+      playerGuesses: null,
+      roundActionFlag: false,
+      chooserDeadline: now + CONFIG.CHOOSER_TIMEOUT,
+      roundDeadline: 0,
+      lastActivity: firebase.database.ServerValue.TIMESTAMP
+    };
+    
+    STATE.roomRef.update(updates);
+  });
+}
+
+// ============================================================
+// 📋 ROOM LIST
+// ============================================================
+db.ref('hangman_rooms').on('value', snapshot => {
+  const rooms = snapshot.val() || {};
+  const container = document.getElementById('rooms-container');
+  container.innerHTML = '';
+  const keys = Object.keys(rooms);
+  if (keys.length === 0) {
+    container.innerHTML = '<div class="empty-state">Няма активни стаи...</div>';
+    return;
+  }
+  keys.forEach(rId => {
+    const room = rooms[rId];
+    if (room.status === 'lobby') {
+      const div = document.createElement('div');
+      div.className = 'room-item';
+      const players = room.players || {};
+      const count = Object.keys(players).length;
+      const creatorName = room.creatorName || 'Играч';
+      div.innerHTML = `<span>🏠 Създател: ${creatorName} <span class="badge">${count} играчи</span></span><button class="btn" style="padding: 4px 12px; font-size: 11px;" onclick="joinRoom('${rId}')">Влез</button>`;
+      container.appendChild(div);
+    }
+  });
+});
+
+// ============================================================
+// 🚀 INIT
+// ============================================================
+setupReconnectHandler();
+setTimeout(cleanupStaleRooms, 5000);
+setInterval(cleanupStaleRooms, 5 * 60 * 1000);
+
+console.log('🎯 Бесеница Pro заредена успешно!');
+console.log('👤 Играч ID:', STATE.myPlayerId);
+</script>
+</body>
+</html>

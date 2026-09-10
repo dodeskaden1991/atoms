@@ -24,6 +24,7 @@
       overflow: hidden;
       width: 100vw;
       height: 100vh;
+      height: 100svh;
       position: relative;
     }
     canvas {
@@ -62,7 +63,6 @@
       z-index: 20;
     }
 
-    /* Ляв блок: Бутон Изход + Здраве - изместен надолу, за да не се застъпва с миникартата */
     .hud-left {
       display: flex;
       flex-direction: row;
@@ -115,7 +115,6 @@
       transition: width 0.15s ease-out;
     }
     
-    /* Централен блок: Лидерборд */
     .leaderboard {
       width: 120px;
       font-size: 9px;
@@ -152,7 +151,6 @@
       font-weight: bold;
     }
 
-    /* Десен блок: Миникарта */
     #minimap {
       width: 65px;
       height: 65px;
@@ -299,7 +297,6 @@
 
 <div id="ui-container">
   <div class="hud-top">
-    <!-- Ляв блок: Бутон Изход + Здраве (разположен под миникартата) -->
     <div class="hud-left">
       <button class="exit-btn" onclick="exitGame()">🚪 Изход</button>
       <div class="stat-card">
@@ -308,13 +305,11 @@
       </div>
     </div>
 
-    <!-- Централен блок: Топ класация -->
     <div class="stat-card leaderboard">
       <h3>Топ Класация</h3>
       <div id="lb-list"></div>
     </div>
 
-    <!-- Десен блок: Миникарта (в горния ляв ъгъл) -->
     <canvas id="minimap" width="60" height="60"></canvas>
   </div>
 
@@ -365,6 +360,7 @@ const WORLD_SIZE = 6000;
 const CENTER_ZONE_SIZE = 2000;
 const CENTER_ZONE_HALF = CENTER_ZONE_SIZE / 2;
 const ENTRANCE_WIDTH = 80;
+const MAX_BULLET_DIST = 800;
 const myPlayerId = 'player_' + Math.random().toString(36).substr(2, 9);
 const CAMERA_ZOOM = 0.6;
 
@@ -377,12 +373,23 @@ let windowWidth = window.innerWidth;
 let windowHeight = window.innerHeight;
 
 function resizeCanvas() {
-  windowWidth = window.innerWidth;
-  windowHeight = window.innerHeight;
+  if (window.visualViewport) {
+    windowWidth = window.visualViewport.width;
+    windowHeight = window.visualViewport.height;
+  } else {
+    windowWidth = window.innerWidth;
+    windowHeight = window.innerHeight;
+  }
+  
   canvas.width = windowWidth;
   canvas.height = windowHeight;
 }
+
 window.addEventListener('resize', resizeCanvas);
+if (window.visualViewport) {
+  window.visualViewport.addEventListener('resize', resizeCanvas);
+  window.visualViewport.addEventListener('scroll', resizeCanvas);
+}
 resizeCanvas();
 
 const keys = {};
@@ -631,7 +638,7 @@ class Tank {
       if (!inCenter) {
         const now = Date.now();
         if (now - this.lastRadDamageTime >= 1000) {
-          this.hp -= 1;
+          this.hp -= 2;
           this.lastRadDamageTime = now;
           if (this.hp <= 0 && this.id === myPlayerId) {
             handleMyDeath();
@@ -650,13 +657,15 @@ class Tank {
     const baseDmg = this.hasShotgun ? 3 : this.bulletDamage;
     
     if (this.hasShotgun) {
-      for (let i = -2; i <= 2; i++) {
-        const angle = this.turretAngle + (i * 0.15);
+      for (let i = 0; i < 6; i++) {
+        const angle = this.turretAngle + (i - 2.5) * 0.15;
         const bulletData = {
           id: 'b_' + Math.random().toString(36).substr(2, 7),
           ownerId: this.id,
           x: this.x + Math.cos(this.turretAngle) * (this.radius + 10),
           y: this.y + Math.sin(this.turretAngle) * (this.radius + 10),
+          startX: this.x,
+          startY: this.y,
           vx: Math.cos(angle) * bSpeed,
           vy: Math.sin(angle) * bSpeed,
           damage: baseDmg,
@@ -670,6 +679,8 @@ class Tank {
         ownerId: this.id,
         x: this.x + Math.cos(this.turretAngle) * (this.radius + 10),
         y: this.y + Math.sin(this.turretAngle) * (this.radius + 10),
+        startX: this.x,
+        startY: this.y,
         vx: Math.cos(this.turretAngle) * bSpeed,
         vy: Math.sin(this.turretAngle) * bSpeed,
         damage: baseDmg,
@@ -729,13 +740,13 @@ class BotTank {
     this.radius = 30;
     this.turretAngle = 0;
     this.speed = 1.5;
-    this.hp = 300;
-    this.maxHp = 300;
+    this.hp = 350;
+    this.maxHp = 350;
     this.cooldown = 0;
     this.color = '#7c3aed';
     this.moveTimer = 0;
     this.moveDir = 0;
-    this.bulletDamage = 8;
+    this.bulletDamage = 10;
     this.lastRadDamageTime = 0;
   }
 
@@ -747,7 +758,7 @@ class BotTank {
       if (!inCenter) {
         const now = Date.now();
         if (now - this.lastRadDamageTime >= 1000) {
-          this.hp -= 1;
+          this.hp -= 2;
           this.lastRadDamageTime = now;
           
           if (this.hp <= 0) {
@@ -793,10 +804,12 @@ class BotTank {
           ownerId: this.id,
           x: this.x + Math.cos(angle) * (this.radius + 10),
           y: this.y + Math.sin(angle) * (this.radius + 10),
+          startX: this.x,
+          startY: this.y,
           vx: Math.cos(angle) * bSpeed,
           vy: Math.sin(angle) * bSpeed,
           damage: this.bulletDamage,
-          size: 6,
+          size: 8,
           isBot: true
         };
         window.db.ref('tank_game/bullets/' + bulletData.id).set(bulletData);
@@ -902,15 +915,11 @@ function setupNetworkListeners() {
       const bData = data[id];
       if (botTanks[id]) {
         botTanks[id].hp = bData.hp;
-        if (Math.hypot(botTanks[id].x - bData.x, botTanks[id].y - bData.y) > 100) {
-          botTanks[id].x = bData.x;
-          botTanks[id].y = bData.y;
-        }
         botTanks[id].turretAngle = bData.turretAngle || 0;
         newBots[id] = botTanks[id];
       } else {
         const bot = new BotTank(id, bData.x, bData.y);
-        bot.hp = bData.hp || 300;
+        bot.hp = bData.hp || 350;
         newBots[id] = bot;
       }
     }
@@ -1040,18 +1049,18 @@ function applyGiftEffect(type) {
   
   switch(type) {
     case 'hp':
-      localPlayer.hp = Math.min(localPlayer.maxHp, localPlayer.hp + 5);
-      showEffectIndicator('❤️ +5 HP', 2000);
+      localPlayer.hp = Math.min(localPlayer.maxHp, localPlayer.hp + 20);
+      showEffectIndicator('❤️ +20 HP', 2000);
       break;
     case 'rapid':
       localPlayer.hasRapidFire = true;
-      localPlayer.rapidFireTimer = 300;
-      showEffectIndicator('⚡ Бърза стрелба! (5сек)', 3000);
+      localPlayer.rapidFireTimer = 1800; // 30 sec
+      showEffectIndicator('⚡ Бърза стрелба! (30сек)', 3000);
       break;
     case 'shotgun':
       localPlayer.hasShotgun = true;
-      localPlayer.shotgunTimer = 300;
-      showEffectIndicator('🔫 Шотгън! (5сек)', 3000);
+      localPlayer.shotgunTimer = 1800; // 30 sec
+      showEffectIndicator('🔫 Шотгън! (30сек)', 3000);
       break;
     case 'bigbullet':
       localPlayer.bulletSize = 2;
@@ -1059,20 +1068,20 @@ function applyGiftEffect(type) {
       setTimeout(() => {
         localPlayer.bulletSize = 1;
         localPlayer.bulletDamage = 5;
-      }, 5000);
-      showEffectIndicator('💥 Големи патрони! (5сек)', 3000);
+      }, 30000); // 30 sec
+      showEffectIndicator('💥 Големи патрони! (30сек)', 3000);
       break;
     case 'fog':
       window.db.ref('tank_game/globalEffects').update({
         fogActive: true
       });
-      showEffectIndicator('🌫️ МЪГЛА ЗА ВСИЧКИ! (10сек)', 3000);
+      showEffectIndicator('🌫️ МЪГЛА ЗА ВСИЧКИ! (30сек)', 3000);
       
       setTimeout(() => {
         window.db.ref('tank_game/globalEffects').update({
           fogActive: false
         });
-      }, 10000);
+      }, 30000); // 30 sec
       break;
 
     case 'radiation':
@@ -1085,7 +1094,7 @@ function applyGiftEffect(type) {
         window.db.ref('tank_game/globalEffects').update({
           radActive: false
         });
-      }, 100000);
+      }, 100000); // 100 sec
       break;
     case 'bot':
       let botX, botY, attempts = 0;
@@ -1099,7 +1108,7 @@ function applyGiftEffect(type) {
       window.db.ref('tank_game/bots/' + botId).set({
         x: botX,
         y: botY,
-        hp: 300,
+        hp: 350,
         turretAngle: 0
       });
       showEffectIndicator('🤖 БОС СПАУНВАН!', 3000);
@@ -1136,7 +1145,6 @@ function gameLoop() {
   ctx.save();
   ctx.scale(CAMERA_ZOOM, CAMERA_ZOOM);
 
-  // Grid
   ctx.strokeStyle = 'rgba(30, 41, 59, 0.08)';
   ctx.lineWidth = 1;
   const gridSize = 80;
@@ -1150,12 +1158,10 @@ function gameLoop() {
     ctx.beginPath(); ctx.moveTo(0, y - camera.y); ctx.lineTo(windowWidth / CAMERA_ZOOM, y - camera.y); ctx.stroke();
   }
 
-  // World border
   ctx.strokeStyle = '#475569';
   ctx.lineWidth = 4;
   ctx.strokeRect(-camera.x, -camera.y, WORLD_SIZE, WORLD_SIZE);
 
-  // GLOBAL FOG
   if (globalEffects.fog.active) {
     const fogIntensity = 0.97;
     const gradient = ctx.createRadialGradient(
@@ -1174,7 +1180,6 @@ function gameLoop() {
     ctx.fillRect(0, 0, windowWidth / CAMERA_ZOOM, windowHeight / CAMERA_ZOOM);
   }
 
-  // Draw center zone with physical walls
   const cx = WORLD_SIZE/2 - camera.x;
   const cy = WORLD_SIZE/2 - camera.y;
   const half = CENTER_ZONE_HALF;
@@ -1199,7 +1204,6 @@ function gameLoop() {
   ctx.fillRect(cx + half - 8, cy + ew, 12, half - ew);
   ctx.shadowBlur = 0;
 
-  // GLOBAL RADIATION warning
   if (globalEffects.radiation.active) {
     const pulse = Math.sin(Date.now() / 500) * 0.3 + 0.7;
     ctx.fillStyle = `rgba(236, 72, 153, ${0.06 * pulse})`;
@@ -1221,7 +1225,6 @@ function gameLoop() {
     ctx.fillText('☢️ РАДИАЦИЯ ИЗВЪН ЗОНАТА!', windowWidth/2 / CAMERA_ZOOM, 30);
   }
 
-  // Draw obstacles
   ctx.fillStyle = '#94a3b8';
   ctx.strokeStyle = '#64748b';
   ctx.lineWidth = 2;
@@ -1230,7 +1233,6 @@ function gameLoop() {
     ctx.strokeRect(obs.x - camera.x, obs.y - camera.y, obs.w, obs.h);
   });
 
-  // Draw traps
   const pulseTrap = Math.sin(Date.now() / 500) * 0.3 + 0.7;
   traps.forEach(trap => {
     ctx.fillStyle = `rgba(220, 38, 38, ${0.15 * pulseTrap})`;
@@ -1243,7 +1245,6 @@ function gameLoop() {
     ctx.setLineDash([]);
   });
 
-  // Draw gifts
   for (let gId in gifts) {
     let g = gifts[gId];
     ctx.save();
@@ -1277,17 +1278,14 @@ function gameLoop() {
     ctx.restore();
   }
 
-  // Draw bot tanks
   for (let id in botTanks) {
     const bot = botTanks[id];
     bot.update();
     bot.draw(ctx);
   }
 
-  // Draw local player
   if (localPlayer && localPlayer.hp > 0) localPlayer.draw(ctx);
 
-  // Draw network players
   const now = Date.now();
   for (let id in networkPlayers) {
     const p = networkPlayers[id];
@@ -1306,11 +1304,16 @@ function gameLoop() {
     }
   }
 
-  // Handle bullets
   for (let i = bullets.length - 1; i >= 0; i--) {
     let b = bullets[i];
     b.x += b.vx;
     b.y += b.vy;
+
+    const distTraveled = Math.hypot(b.x - (b.startX !== undefined ? b.startX : b.x), b.y - (b.startY !== undefined ? b.startY : b.y));
+    if (distTraveled > MAX_BULLET_DIST) {
+      bullets.splice(i, 1);
+      continue;
+    }
 
     if (bulletHitsWall(b.x, b.y)) {
       bullets.splice(i, 1);
@@ -1332,7 +1335,6 @@ function gameLoop() {
     ctx.beginPath(); ctx.arc(0, 0, size, 0, Math.PI * 2); ctx.fill();
     ctx.restore();
 
-    // Check hits on local player
     if (localPlayer && b.ownerId !== localPlayer.id && localPlayer.hp > 0) {
       const dist = Math.hypot(b.x - localPlayer.x, b.y - localPlayer.y);
       if (dist < localPlayer.radius + (b.size || 5)) {
@@ -1346,7 +1348,6 @@ function gameLoop() {
       }
     }
 
-    // Check hits on bot tanks
     for (let id in botTanks) {
       const bot = botTanks[id];
       if (b.ownerId !== id && bot.hp > 0) {
@@ -1364,7 +1365,6 @@ function gameLoop() {
       }
     }
 
-    // Check hits on network players
     for (let id in networkPlayers) {
       const p = networkPlayers[id];
       if (b.ownerId !== id && p.hp > 0) {

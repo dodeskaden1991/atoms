@@ -1,0 +1,963 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
+    <title>🔧 Оптичен дизайнер – финал</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background: #0b0e14;
+            color: #e0e5ec;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            touch-action: manipulation;
+        }
+        #top {
+            background: #181f2a;
+            padding: 6px 12px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px 12px;
+            align-items: center;
+            border-bottom: 1px solid #2a3344;
+            flex-shrink: 0;
+        }
+        #top .brand { font-weight: 700; font-size: 15px; }
+        #top label { display: flex; align-items: center; gap: 4px; font-size: 12px; white-space: nowrap; }
+        #top input[type="number"], #top select {
+            background: #0f1620; border: 1px solid #2a3344; color: #fff;
+            padding: 2px 6px; border-radius: 4px; font-size: 12px; width: 55px;
+        }
+        #top select { width: auto; }
+        #top button {
+            background: #2a3a5a; border: none; color: #fff;
+            padding: 4px 12px; border-radius: 4px; cursor: pointer; font-size: 12px;
+        }
+        #top button:hover { background: #3a4a6a; }
+        #top .spacer { flex: 1; }
+
+        #main {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+            flex-direction: row;
+        }
+        #panel {
+            width: 250px;
+            min-width: 180px;
+            background: #141c26;
+            padding: 8px;
+            overflow-y: auto;
+            border-right: 1px solid #2a3344;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+        #panel h3 { font-size: 12px; color: #8899bb; margin: 2px 0; }
+        .comp-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 3px;
+        }
+        .comp-btn {
+            background: #1f2a3a;
+            border: 1px solid #2a3a55;
+            border-radius: 4px;
+            padding: 4px 6px;
+            font-size: 10px;
+            color: #c0d0e0;
+            cursor: pointer;
+            flex: 1 0 auto;
+            max-width: 60px;
+            text-align: center;
+        }
+        .comp-btn:hover { background: #2a3a5a; border-color: #4a6a9a; }
+        #info {
+            background: #0f1620;
+            border-radius: 6px;
+            padding: 6px;
+            font-size: 11px;
+            line-height: 1.4;
+            border: 1px solid #2a3344;
+            min-height: 80px;
+            overflow-y: auto;
+        }
+        #info .label { color: #8899bb; }
+        #info .value { color: #e0e5ec; font-weight: 600; }
+        #info .ok { color: #6fcf97; }
+        #info .bad { color: #f28b82; }
+        #editPanel {
+            background: #0f1620;
+            border: 1px solid #2a3344;
+            border-radius: 6px;
+            padding: 4px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            align-items: center;
+        }
+        #editPanel label { font-size: 10px; display: flex; align-items: center; gap: 3px; }
+        #editPanel input[type="number"] {
+            width: 40px; background: #0b0e14; border: 1px solid #2a3344;
+            color: #fff; padding: 2px; border-radius: 4px; font-size: 10px;
+        }
+        #editPanel button {
+            background: #2a3a5a; border: none; color: #fff;
+            padding: 2px 8px; border-radius: 4px; cursor: pointer; font-size: 10px;
+        }
+        #editPanel button.danger { background: #5a2a2a; }
+        #editPanel button.success { background: #2a5a3a; }
+
+        #canvas-wrap {
+            flex: 1;
+            position: relative;
+            background: #0b0e14;
+            overflow: hidden;
+            touch-action: none;
+            cursor: grab;
+        }
+        #canvas-wrap:active {
+            cursor: grabbing;
+        }
+        #canvas-wrap canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            touch-action: none;
+        }
+
+        #bottom {
+            background: #181f2a;
+            padding: 3px 12px;
+            border-top: 1px solid #2a3344;
+            font-size: 10px;
+            color: #667;
+            display: flex;
+            justify-content: space-between;
+            flex-shrink: 0;
+            flex-wrap: wrap;
+        }
+
+        .context-menu {
+            display: none;
+            position: fixed;
+            background: #1a2330;
+            border: 1px solid #2a3a55;
+            border-radius: 6px;
+            padding: 4px 0;
+            min-width: 140px;
+            z-index: 1000;
+        }
+        .context-menu div {
+            padding: 5px 14px;
+            font-size: 12px;
+            cursor: pointer;
+            color: #c0d0e0;
+        }
+        .context-menu div:hover { background: #2a3a5a; }
+        .context-menu .danger { color: #f28b82; }
+        .context-menu .danger:hover { background: #4a2a2a; }
+
+        @media (max-width: 700px) {
+            #main { flex-direction: column; }
+            #panel {
+                width: 100%;
+                min-width: unset;
+                max-height: 40vh;
+                border-right: none;
+                border-bottom: 1px solid #2a3344;
+            }
+            #top .brand { font-size: 13px; }
+            #top label { font-size: 10px; }
+            #top input[type="number"] { width: 40px; }
+            .comp-btn { font-size: 9px; padding: 4px 3px; max-width: 50px; }
+            #info { font-size: 10px; min-height: 60px; }
+            #editPanel { padding: 3px; }
+            #editPanel button { font-size: 9px; padding: 2px 6px; }
+            #bottom { font-size: 8px; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="top">
+    <span class="brand">🔧 Оптичен дизайнер</span>
+    <label>Вход <input type="number" id="inputLevel" value="5" step="0.5"></label>
+    <label>Вълна
+        <select id="wavelength">
+            <option value="0.35">1310 nm</option>
+            <option value="0.22" selected>1550 nm</option>
+        </select>
+    </label>
+    <label>Мин. ниво <input type="number" id="minLevel" value="-25" step="1"></label>
+    <button id="homeBtn"><a href="/" style="text-decoration: none; color: white;">🏠 НАЧАЛО</a></button>
+    <button id="clearBtn">🗑️ Изчисти</button>
+    <span class="spacer"></span>
+    <span style="font-size:11px;color:#667;">⬅️ Избери → добави</span>
+</div>
+
+<div id="main">
+    <div id="panel">
+        <h3>📦 Компоненти</h3>
+        <div class="comp-group">
+            <button class="comp-btn" data-type="cable">Кабел</button>
+            <button class="comp-btn" data-type="splitter1x2">1×2</button>
+            <button class="comp-btn" data-type="splitter1x4">1×4</button>
+            <button class="comp-btn" data-type="splitter1x8">1×8</button>
+            <button class="comp-btn" data-type="splitter1x16">1×16</button>
+            <button class="comp-btn" data-type="splitter1x32">1×32</button>
+            <button class="comp-btn" data-type="fusion">Заварка</button>
+            <button class="comp-btn" data-type="adapter">Адаптер</button>
+        </div>
+
+        <h3>📐 Избран възел</h3>
+        <div id="info">Няма избран</div>
+
+        <div id="editPanel">
+            <label>Дълж. <input type="number" id="editLength" step="0.1" min="0"></label>
+            <button id="applyLengthBtn" title="Приложи">✅</button>
+            <button id="changeTypeBtn" title="Промени тип">✏️</button>
+            <button id="detachNodeBtn" class="danger" title="Откачи">✂️</button>
+            <button id="deleteNodeBtn" class="danger" title="Изтрий">🗑️</button>
+            <button id="attachDetachedBtn" class="success" title="Прикачи откачения">📎</button>
+            <button id="collapseBtn" title="Свий/разгъни">−/+</button>
+        </div>
+        <div style="font-size:10px;color:#667;margin-top:2px;">
+            ✏️ – смени тип | 📎 – прикачи клон
+        </div>
+    </div>
+
+    <div id="canvas-wrap">
+        <canvas id="netCanvas"></canvas>
+    </div>
+</div>
+
+<div id="bottom">
+    <span>💡 Десен клик → меню | Докосни и задръж (моб.)</span>
+    <span>📏 Дължина на кабел – въведи в км</span>
+</div>
+
+<div class="context-menu" id="contextMenu">
+    <div data-action="edit">✏️ Промени тип</div>
+    <div data-action="changeLength">📏 Промени дължина</div>
+    <div data-action="toggleCollapse">−/+ Свий/разгъни</div>
+    <div data-action="detach">✂️ Откачи</div>
+    <div class="danger" data-action="delete">🗑️ Изтрий</div>
+</div>
+
+<script>
+    const COMP_TYPES = {
+        cable: { label: 'Кабел', icon: '━', isContainer: false, defaultParams: { length: 1 } },
+        splitter1x2: { label: '1×2', icon: '⬡', isContainer: true, outCount: 2, loss: 3.7, tolerance: 0.5 },
+        splitter1x4: { label: '1×4', icon: '⬡', isContainer: true, outCount: 4, loss: 7.2, tolerance: 0.6 },
+        splitter1x8: { label: '1×8', icon: '⬡', isContainer: true, outCount: 8, loss: 10.5, tolerance: 0.8 },
+        splitter1x16: { label: '1×16', icon: '⬡', isContainer: true, outCount: 16, loss: 13.5, tolerance: 1.0 },
+        splitter1x32: { label: '1×32', icon: '⬡', isContainer: true, outCount: 32, loss: 16.5, tolerance: 1.2 },
+        fusion: { label: 'Заварка', icon: '⏣', isContainer: false, loss: 0.1, tolerance: 0.05 },
+        adapter: { label: 'Адаптер', icon: '⏣', isContainer: false, loss: 0.3, tolerance: 0.2 }
+    };
+
+    let tree = null;
+    let selectedNode = null;
+    let detachedRoot = null;
+    let nodeIdCounter = 0;
+
+    let inputLevel = 5;
+    let wavelengthLoss = 0.22;
+    let minLevel = -25;
+
+    // Параметри за зуум и пан (панорамиране)
+    let zoom = 1;
+    let panX = 0;
+    let panY = 0;
+    let isDragging = false;
+    let startDragX = 0;
+    let startDragY = 0;
+
+    const canvas = document.getElementById('netCanvas');
+    const ctx = canvas.getContext('2d');
+    const infoDiv = document.getElementById('info');
+    const editLength = document.getElementById('editLength');
+    const contextMenu = document.getElementById('contextMenu');
+
+    // Фиксирани размери за стабилно рендиране
+    const NODE_W = 100;
+    const NODE_H = 50;
+
+    class Node {
+        constructor(type, params = {}) {
+            this.id = nodeIdCounter++;
+            this.type = type;
+            this.params = { ...params };
+            this.children = [];
+            this.parent = null;
+            this.x = 0; this.y = 0;
+            this.collapsed = false;
+        }
+
+        getLoss() {
+            const info = COMP_TYPES[this.type];
+            if (!info) return 0;
+            if (this.type === 'cable') return (this.params.length || 0) * wavelengthLoss;
+            return info.loss || 0;
+        }
+
+        getTolerance() {
+            const info = COMP_TYPES[this.type];
+            return info?.tolerance || 0;
+        }
+
+        isSplitter() { return this.type && this.type.startsWith('splitter'); }
+
+        getOutputCount() {
+            const info = COMP_TYPES[this.type];
+            return info?.outCount || 1;
+        }
+
+        getPathLoss() {
+            let loss = 0;
+            let n = this;
+            while (n) { loss += n.getLoss(); n = n.parent; }
+            return loss;
+        }
+
+        getPathLossRange() {
+            let min = 0, max = 0;
+            let n = this;
+            while (n) {
+                const l = n.getLoss(), t = n.getTolerance();
+                min += l - t;
+                max += l + t;
+                n = n.parent;
+            }
+            return { min, max };
+        }
+
+        getSignalLevel(input) {
+            const loss = this.getPathLoss();
+            const tol = this.getTolerance();
+            return {
+                avg: input - loss,
+                min: input - (loss + tol),
+                max: input - (loss - tol)
+            };
+        }
+
+        addChild(node) {
+            if (this.isSplitter()) {
+                if (this.children.length >= this.getOutputCount()) return false;
+            } else {
+                if (this.children.length >= 1) return false;
+            }
+            node.parent = this;
+            this.children.push(node);
+            return true;
+        }
+
+        removeChild(node) {
+            const idx = this.children.indexOf(node);
+            if (idx === -1) return false;
+            this.children.splice(idx, 1);
+            node.parent = null;
+            return true;
+        }
+
+        changeType(newType) {
+            const info = COMP_TYPES[newType];
+            if (!info) return false;
+            if (newType === 'cable') {
+                this.params = { length: this.params.length || 1 };
+            } else {
+                delete this.params.length;
+            }
+            this.type = newType;
+            if (this.isSplitter()) {
+                while (this.children.length > this.getOutputCount()) {
+                    const removed = this.children.pop();
+                    removed.parent = null;
+                }
+            }
+            return true;
+        }
+
+        clone() {
+            const clone = new Node(this.type, { ...this.params });
+            clone.collapsed = this.collapsed;
+            for (const child of this.children) {
+                clone.addChild(child.clone());
+            }
+            return clone;
+        }
+    }
+
+    // Подобрен алгоритъм за разпределение (избягва застъпване и променливи размери на кутиите)
+    function getSubtreeWidth(node, spacing = 30) {
+        if (!node || node.collapsed || node.children.length === 0) return NODE_W;
+        let total = 0;
+        for (const child of node.children) {
+            total += getSubtreeWidth(child, spacing);
+        }
+        return Math.max(NODE_W, total + (node.children.length - 1) * spacing);
+    }
+
+    function layout(node, x, y, levelSpacing = 110, spacing = 40) {
+        if (!node) return;
+        node.x = x;
+        node.y = y;
+
+        if (node.collapsed || node.children.length === 0) return;
+
+        let totalW = getSubtreeWidth(node, spacing);
+        let startX = x - totalW / 2;
+        let currentX = startX;
+
+        for (const child of node.children) {
+            let childW = getSubtreeWidth(child, spacing);
+            let childX = currentX + childW / 2;
+            layout(child, childX, y + levelSpacing, levelSpacing, spacing);
+            currentX += childW + spacing;
+        }
+    }
+
+    function render() {
+        const rect = canvas.parentElement.getBoundingClientRect();
+        const w = rect.width, h = rect.height;
+        canvas.width = w * devicePixelRatio;
+        canvas.height = h * devicePixelRatio;
+        canvas.style.width = w + 'px';
+        canvas.style.height = h + 'px';
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.scale(devicePixelRatio, devicePixelRatio);
+        ctx.clearRect(0, 0, w, h);
+
+        if (!tree) return;
+
+        const startY = 60;
+        const levelSpacing = 120;
+        const nodeSpacing = 50;
+        layout(tree, 0, startY, levelSpacing, nodeSpacing);
+
+        ctx.save();
+        // Прилагаме пан и зуум трансформациите
+        ctx.translate(panX, panY);
+        ctx.scale(zoom, zoom);
+
+        drawNode(ctx, tree);
+        ctx.restore();
+    }
+
+    function drawNode(ctx, node) {
+        if (!node) return;
+        const x = node.x, y = node.y;
+        const isSelected = (selectedNode === node);
+        const isInput = node.type === 'input';
+
+        // Връзки към децата
+        if (!node.collapsed) {
+            for (const child of node.children) {
+                const cx = child.x, cy = child.y;
+                const startX = x;
+                const startY = y + NODE_H/2;
+                const endX = cx;
+                const endY = cy - NODE_H/2;
+                ctx.beginPath();
+                ctx.moveTo(startX, startY);
+                ctx.lineTo(startX, (startY + endY)/2);
+                ctx.lineTo(endX, (startY + endY)/2);
+                ctx.lineTo(endX, endY);
+                ctx.strokeStyle = '#4a6a8a';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                // Стрелка
+                ctx.beginPath();
+                ctx.moveTo(endX - 5, endY - 4);
+                ctx.lineTo(endX, endY);
+                ctx.lineTo(endX - 5, endY + 4);
+                ctx.strokeStyle = '#4a6a8a';
+                ctx.stroke();
+            }
+        }
+
+        // Кутия на възела
+        ctx.shadowColor = 'rgba(0,0,0,0.4)';
+        ctx.shadowBlur = 6;
+        let fillColor = isInput ? '#1a3a5a' : (node.isSplitter() ? '#1f4a3a' : '#2a2a3a');
+        if (node.collapsed) fillColor = '#3a2a2a';
+        ctx.fillStyle = fillColor;
+        ctx.strokeStyle = isSelected ? '#4a8aba' : '#4a5a6a';
+        ctx.lineWidth = isSelected ? 2.5 : 1;
+        ctx.beginPath();
+        ctx.roundRect(x - NODE_W/2, y - NODE_H/2, NODE_W, NODE_H, 6);
+        ctx.fill();
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+
+        // Текст в кутията
+        ctx.fillStyle = '#e0e5ec';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.font = '11px sans-serif';
+
+        let label = '';
+        if (isInput) label = 'Вход';
+        else if (node.type === 'cable') label = `Кабел ${node.params.length || 0} km`;
+        else if (node.isSplitter()) label = COMP_TYPES[node.type]?.label || node.type;
+        else if (node.type === 'fusion') label = 'Заварка';
+        else if (node.type === 'adapter') label = 'Адаптер';
+        else label = node.type;
+
+        ctx.fillText(label, x, y - 10);
+
+        // Затихване
+        const loss = node.getLoss();
+        const tol = node.getTolerance();
+        ctx.fillStyle = '#8899bb';
+        ctx.font = '9px sans-serif';
+        ctx.fillText(`${loss.toFixed(2)} dB${tol > 0 ? ' ±'+tol.toFixed(1) : ''}`, x, y + 4);
+
+        // Сигнал (ако е краен възел)
+        if (node.children.length === 0 && !isInput) {
+            const level = node.getSignalLevel(inputLevel);
+            const ok = level.min >= minLevel;
+            ctx.fillStyle = ok ? '#6fcf97' : '#f28b82';
+            ctx.font = 'bold 10px sans-serif';
+            ctx.fillText(`${level.avg.toFixed(1)} dBm`, x, y + 18);
+        }
+
+        // Бутон за свиване/разгъване (+) (-)
+        if (node.children.length > 0 && !isInput) {
+            const btnX = x + NODE_W/2 - 12;
+            const btnY = y - NODE_H/2 - 6;
+            ctx.fillStyle = '#3a4a5a';
+            ctx.beginPath();
+            ctx.roundRect(btnX, btnY, 14, 14, 3);
+            ctx.fill();
+            ctx.fillStyle = '#c0d0e0';
+            ctx.font = '11px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(node.collapsed ? '+' : '−', btnX + 7, btnY + 7);
+        }
+
+        if (node.collapsed && node.children.length > 0) {
+            ctx.fillStyle = '#667799';
+            ctx.font = '9px sans-serif';
+            ctx.fillText(`+${node.children.length} записа`, x, y + NODE_H/2 + 10);
+        }
+
+        if (!node.collapsed) {
+            for (const child of node.children) {
+                drawNode(ctx, child);
+            }
+        }
+    }
+
+    function updateInfo() {
+        if (!selectedNode) {
+            infoDiv.innerHTML = 'Няма избран възел';
+            editLength.value = '';
+            editLength.disabled = true;
+            return;
+        }
+        const node = selectedNode;
+        const info = COMP_TYPES[node.type] || { label: node.type };
+        let html = `<div><span class="label">Тип:</span> <span class="value">${info.label}</span></div>`;
+        if (node.type === 'cable') {
+            html += `<div><span class="label">Дължина:</span> <span class="value">${node.params.length || 0} km</span></div>`;
+            html += `<div><span class="label">Затихване:</span> <span class="value">${node.getLoss().toFixed(3)} dB</span></div>`;
+        } else if (node.isSplitter()) {
+            html += `<div><span class="label">Изходи:</span> <span class="value">${node.getOutputCount()}</span></div>`;
+            html += `<div><span class="label">Затихване:</span> <span class="value">${node.getLoss().toFixed(2)} dB</span></div>`;
+            html += `<div><span class="label">Толеранс:</span> <span class="value">±${node.getTolerance().toFixed(2)} dB</span></div>`;
+        } else {
+            html += `<div><span class="label">Затихване:</span> <span class="value">${node.getLoss().toFixed(2)} dB</span></div>`;
+            html += `<div><span class="label">Толеранс:</span> <span class="value">±${node.getTolerance().toFixed(2)} dB</span></div>`;
+        }
+        const pathLoss = node.getPathLoss();
+        const range = node.getPathLossRange();
+        html += `<div><span class="label">Общо затихване:</span> <span class="value">${pathLoss.toFixed(2)} dB</span> [${range.min.toFixed(2)}..${range.max.toFixed(2)}]</div>`;
+        const level = node.getSignalLevel(inputLevel);
+        const ok = level.min >= minLevel;
+        html += `<div><span class="label">Ниво:</span> <span class="value ${ok?'ok':'bad'}">${level.avg.toFixed(2)} dBm</span> [${level.min.toFixed(2)}..${level.max.toFixed(2)}] ${ok?'✅':'❌'}</div>`;
+        infoDiv.innerHTML = html;
+
+        if (node.type === 'cable') {
+            editLength.value = node.params.length || 0;
+            editLength.disabled = false;
+        } else {
+            editLength.value = '';
+            editLength.disabled = true;
+        }
+    }
+
+    function addComponent(type) {
+        if (!selectedNode) { alert('Избери възел, към който да добавиш.'); return; }
+        let newNode = null;
+        if (type === 'cable') {
+            const len = parseFloat(prompt('Дължина (km):', '1'));
+            if (isNaN(len) || len <= 0) return;
+            newNode = new Node('cable', { length: len });
+        } else {
+            newNode = new Node(type);
+        }
+        if (selectedNode.addChild(newNode)) {
+            selectedNode = newNode;
+            render();
+            updateInfo();
+        } else {
+            alert('Не може да добавиш повече деца към този възел.');
+        }
+    }
+
+    function deleteSelected() {
+        if (!selectedNode || selectedNode.type === 'input') return;
+        const parent = selectedNode.parent;
+        if (!parent) return;
+        if (parent.removeChild(selectedNode)) {
+            selectedNode = parent;
+            render();
+            updateInfo();
+        }
+    }
+
+    function detachSelected() {
+        if (!selectedNode || selectedNode.type === 'input') return;
+        const parent = selectedNode.parent;
+        if (!parent) return;
+        detachedRoot = selectedNode.clone();
+        if (parent.removeChild(selectedNode)) {
+            selectedNode = parent;
+            render();
+            updateInfo();
+            alert('Клонът е откачен. Избери нов родител и натисни 📎 за прикачване.');
+        }
+    }
+
+    function attachDetached() {
+        if (!detachedRoot) { alert('Няма откачен клон.'); return; }
+        if (!selectedNode) { alert('Избери възел за прикачване.'); return; }
+        const clone = detachedRoot.clone();
+        if (selectedNode.addChild(clone)) {
+            detachedRoot = null;
+            selectedNode = clone;
+            render();
+            updateInfo();
+        } else {
+            alert('Не може да прикачиш тук (няма свободни изходи).');
+        }
+    }
+
+    function toggleCollapse() {
+        if (!selectedNode || selectedNode.children.length === 0) return;
+        selectedNode.collapsed = !selectedNode.collapsed;
+        render();
+        updateInfo();
+    }
+
+    function changeNodeType(newType) {
+        if (!selectedNode || selectedNode.type === 'input') return;
+        if (selectedNode.changeType(newType)) {
+            render();
+            updateInfo();
+        } else {
+            alert('Невалиден тип.');
+        }
+    }
+
+    function applyLength() {
+        if (!selectedNode || selectedNode.type !== 'cable') return;
+        const val = parseFloat(editLength.value);
+        if (!isNaN(val) && val >= 0) {
+            selectedNode.params.length = val;
+            render();
+            updateInfo();
+        }
+    }
+
+    let contextTarget = null;
+
+    function showContextMenu(e) {
+        e.preventDefault();
+        const rect = canvas.getBoundingClientRect();
+        const found = findNodeAtCoord(e.clientX - rect.left, e.clientY - rect.top, rect);
+        if (found && found.type !== 'input') {
+            selectedNode = found;
+            contextTarget = found;
+            updateInfo();
+            render();
+            contextMenu.style.display = 'block';
+            contextMenu.style.left = Math.min(e.clientX, window.innerWidth - 160) + 'px';
+            contextMenu.style.top = Math.min(e.clientY, window.innerHeight - 120) + 'px';
+        } else {
+            contextMenu.style.display = 'none';
+        }
+    }
+
+    function findNodeAtCoord(clientX, clientY, rect) {
+        // Трансформираме клик координатите от екрана към света на дървото (обратно на пан и зуум)
+        const worldX = (clientX - panX) / zoom;
+        const worldY = (clientY - panY) / zoom;
+        return checkHitWorld(tree, worldX, worldY);
+    }
+
+    function checkHitWorld(node, wx, wy) {
+        if (!node) return null;
+
+        const x = node.x;
+        const y = node.y;
+        const sW = NODE_W;
+        const sH = NODE_H;
+
+        if (wx >= x - sW/2 && wx <= x + sW/2 && wy >= y - sH/2 && wy <= y + sH/2) {
+            return node;
+        }
+
+        // Проверка за бутона за свиване
+        if (node.children.length > 0 && node.type !== 'input') {
+            const btnX = x + sW/2 - 12;
+            const btnY = y - sH/2 - 6;
+            if (wx >= btnX && wx <= btnX + 14 && wy >= btnY && wy <= btnY + 14) {
+                node.collapsed = !node.collapsed;
+                render();
+                updateInfo();
+                return null;
+            }
+        }
+
+        if (!node.collapsed) {
+            for (const child of node.children) {
+                const found = checkHitWorld(child, wx, wy);
+                if (found) return found;
+            }
+        }
+        return null;
+    }
+
+    canvas.addEventListener('contextmenu', showContextMenu);
+
+    // Управление на мишката за драг/пан и клик
+    let hasMoved = false;
+    canvas.addEventListener('mousedown', (e) => {
+        if (e.button === 0) { // Ляв бутон
+            isDragging = true;
+            hasMoved = false;
+            startDragX = e.clientX - panX;
+            startDragY = e.clientY - panY;
+        }
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+        if (isDragging) {
+            const dx = e.clientX - startDragX - panX;
+            const dy = e.clientY - startDragY - panY;
+            if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+                hasMoved = true;
+            }
+            panX = e.clientX - startDragX;
+            panY = e.clientY - startDragY;
+            render();
+        }
+    });
+
+    canvas.addEventListener('mouseup', (e) => {
+        if (isDragging) {
+            isDragging = false;
+            if (!hasMoved && e.button === 0) {
+                // Ако не сме мърдали мишката значи е клик
+                const rect = canvas.getBoundingClientRect();
+                const found = findNodeAtCoord(e.clientX - rect.left, e.clientY - rect.top, rect);
+                if (found) {
+                    selectedNode = found;
+                    updateInfo();
+                    render();
+                }
+            }
+        }
+        contextMenu.style.display = 'none';
+    });
+
+    // Зуум с колелцето на мишката спрямо позицията на курсора
+    canvas.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        const rect = canvas.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+
+        const zoomFactor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
+        const newZoom = Math.max(0.2, Math.min(4, zoom * zoomFactor));
+
+        // Центриране на зуума спрямо курсора
+        panX = mouseX - (mouseX - panX) * (newZoom / zoom);
+        panY = mouseY - (mouseY - panY) * (newZoom / zoom);
+        zoom = newZoom;
+
+        render();
+    }, { passive: false });
+
+    // Поддръжка за докосване (Touch пан и тап)
+    let touchStartDist = 0;
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let isTouchDragging = false;
+
+    canvas.addEventListener('touchstart', (e) => {
+        if (e.touches.length === 1) {
+            isTouchDragging = true;
+            hasMoved = false;
+            touchStartX = e.touches[0].clientX - panX;
+            touchStartY = e.touches[0].clientY - panY;
+        } else if (e.touches.length === 2) {
+            isTouchDragging = false;
+            touchStartDist = Math.hypot(
+                e.touches[0].clientX - e.touches[1].clientX,
+                e.touches[0].clientY - e.touches[1].clientY
+            );
+        }
+    }, { passive: true });
+
+    canvas.addEventListener('touchmove', (e) => {
+        if (isTouchDragging && e.touches.length === 1) {
+            const dx = e.touches[0].clientX - touchStartX - panX;
+            const dy = e.touches[0].clientY - touchStartY - panY;
+            if (Math.abs(dx) > 4 || Math.abs(dy) > 4) {
+                hasMoved = true;
+            }
+            panX = e.touches[0].clientX - touchStartX;
+            panY = e.touches[0].clientY - touchStartY;
+            render();
+        } else if (e.touches.length === 2) {
+            const dist = Math.hypot(
+                e.touches[0].clientX - e.touches[1].clientX,
+                e.touches[0].clientY - e.touches[1].clientY
+            );
+            if (touchStartDist > 0) {
+                const factor = dist / touchStartDist;
+                const newZoom = Math.max(0.2, Math.min(4, zoom * factor));
+                zoom = newZoom;
+                touchStartDist = dist;
+                render();
+            }
+        }
+    }, { passive: true });
+
+    canvas.addEventListener('touchend', (e) => {
+        if (isTouchDragging && !hasMoved && e.changedTouches.length === 1) {
+            const rect = canvas.getBoundingClientRect();
+            const found = findNodeAtCoord(e.changedTouches[0].clientX - rect.left, e.changedTouches[0].clientY - rect.top, rect);
+            if (found) {
+                selectedNode = found;
+                updateInfo();
+                render();
+            }
+        }
+        isTouchDragging = false;
+    });
+
+    document.addEventListener('click', () => { contextMenu.style.display = 'none'; });
+
+    contextMenu.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const action = e.target.dataset.action;
+        if (!contextTarget) return;
+        switch (action) {
+            case 'edit': {
+                const newType = prompt('Нов тип (cable, splitter1x2, splitter1x4, splitter1x8, splitter1x16, splitter1x32, fusion, adapter):', contextTarget.type);
+                if (newType && COMP_TYPES[newType]) changeNodeType(newType);
+                break;
+            }
+            case 'changeLength': {
+                if (contextTarget.type === 'cable') {
+                    const len = prompt('Нова дължина (km):', contextTarget.params.length || 1);
+                    if (len !== null && !isNaN(parseFloat(len)) && parseFloat(len) >= 0) {
+                        contextTarget.params.length = parseFloat(len);
+                        render();
+                        updateInfo();
+                    }
+                } else alert('Само кабел има дължина.');
+                break;
+            }
+            case 'toggleCollapse': toggleCollapse(); break;
+            case 'detach': detachSelected(); break;
+            case 'delete': if (confirm('Изтриване на поддървото?')) deleteSelected(); break;
+        }
+        contextMenu.style.display = 'none';
+        contextTarget = null;
+    });
+
+    function initTree() {
+        tree = new Node('input');
+        tree.type = 'input';
+        selectedNode = tree;
+        detachedRoot = null;
+        nodeIdCounter = 0;
+        zoom = 1;
+        panX = canvas.parentElement.clientWidth / 2;
+        panY = 50;
+        render();
+        updateInfo();
+    }
+
+    function initUI() {
+        document.querySelectorAll('.comp-btn').forEach(btn => {
+            btn.addEventListener('click', () => addComponent(btn.dataset.type));
+        });
+
+        document.getElementById('deleteNodeBtn').addEventListener('click', deleteSelected);
+        document.getElementById('detachNodeBtn').addEventListener('click', detachSelected);
+        document.getElementById('attachDetachedBtn').addEventListener('click', attachDetached);
+        document.getElementById('collapseBtn').addEventListener('click', toggleCollapse);
+        document.getElementById('applyLengthBtn').addEventListener('click', applyLength);
+        document.getElementById('changeTypeBtn').addEventListener('click', () => {
+            if (!selectedNode || selectedNode.type === 'input') return;
+            const newType = prompt('Нов тип:', selectedNode.type);
+            if (newType && COMP_TYPES[newType]) changeNodeType(newType);
+        });
+        document.getElementById('clearBtn').addEventListener('click', () => { if (confirm('Изчисти всичко?')) initTree(); });
+
+        document.getElementById('inputLevel').addEventListener('input', function() {
+            inputLevel = parseFloat(this.value) || 0;
+            render();
+            updateInfo();
+        });
+        document.getElementById('wavelength').addEventListener('change', function() {
+            wavelengthLoss = parseFloat(this.value);
+            render();
+            updateInfo();
+        });
+        document.getElementById('minLevel').addEventListener('input', function() {
+            minLevel = parseFloat(this.value) || -30;
+            render();
+            updateInfo();
+        });
+
+        window.addEventListener('resize', render);
+    }
+
+    if (!CanvasRenderingContext2D.prototype.roundRect) {
+        CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r) {
+            if (r > w/2) r = w/2;
+            if (r > h/2) r = h/2;
+            this.moveTo(x + r, y);
+            this.lineTo(x + w - r, y);
+            this.quadraticCurveTo(x + w, y, x + w, y + r);
+            this.lineTo(x + w, y + h - r);
+            this.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+            this.lineTo(x + r, y + h);
+            this.quadraticCurveTo(x, y + h, x, y + h - r);
+            this.lineTo(x, y + r);
+            this.quadraticCurveTo(x, y, x + r, y);
+            return this;
+        };
+    }
+
+    initTree();
+    initUI();
+</script>
+</body>
+</html>

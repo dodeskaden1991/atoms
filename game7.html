@@ -1,0 +1,1007 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Змията – Snake</title>
+    <style>
+        /* ---------- Основни стилове ---------- */
+        * {
+            box-sizing: border-box;
+            user-select: none;
+        }
+        html, body {
+            margin: 0;
+            padding: 0;
+            touch-action: none;
+            background: #1a1a2e;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .game-wrapper {
+            background: #16213e;
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.7);
+            max-width: 820px;
+            width: fit-content;
+            margin: 10px;
+        }
+        .body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+        }
+        /* ---------- Игрално поле ---------- */
+        .snakeBody {
+            display: grid;
+            grid-template-columns: repeat(15, 20px);
+            grid-template-rows: repeat(20, 20px);
+            background: #0f3460;
+            border: 3px solid #533483;
+            border-radius: 8px;
+            gap: 1px;
+            padding: 2px;
+            touch-action: none;
+        }
+        .snake {
+            background: #1a1a2e;
+            border-radius: 3px;
+            transition: background 0.08s ease, transform 0.1s ease;
+            width: 100%;
+            height: 100%;
+        }
+        .snakeMove {
+            background: #4ecca3;
+            border-radius: 3px;
+            transition: background 0.08s ease, transform 0.1s ease;
+            width: 100%;
+            height: 100%;
+        }
+        .snakeHead {
+            background: #2ecc71 !important;
+            border-radius: 5px 5px 2px 2px;
+            box-shadow: 0 0 8px #2ecc71aa;
+        }
+        .snakeBall {
+            background: #f1c40f;
+            border-radius: 50%;
+            box-shadow: 0 0 12px #f1c40f;
+            animation: pulse 0.8s infinite alternate;
+        }
+        .snakeBonusBall {
+            background: #f39c12;
+            border-radius: 50%;
+            box-shadow: 0 0 20px #f39c12, 0 0 40px #f39c12;
+            animation: pulse 0.4s infinite alternate, glow 1s infinite;
+        }
+        .snakePoisonBall {
+            background: #e74c3c;
+            border-radius: 50%;
+            box-shadow: 0 0 12px #e74c3c;
+            animation: pulse 0.6s infinite alternate-reverse;
+        }
+        .snakeObstacle {
+            background: #7f8c8d;
+            border-radius: 4px;
+            box-shadow: inset 0 0 6px #2c3e50;
+        }
+        @keyframes pulse {
+            0% { transform: scale(0.9); }
+            100% { transform: scale(1.1); }
+        }
+        @keyframes glow {
+            0% { box-shadow: 0 0 10px #f39c12; }
+            100% { box-shadow: 0 0 30px #f39c12, 0 0 60px #f39c12; }
+        }
+        /* ---------- Контроли и информация ---------- */
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin-top: 6px;
+            width: 100%;
+        }
+        .controls button, .controls a {
+            background: #533483;
+            border: none;
+            color: white;
+            padding: 8px 18px;
+            border-radius: 30px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+            box-shadow: 0 4px 0 #3b1f5e;
+            touch-action: manipulation;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+        }
+        .controls button:active, .controls a:active {
+            transform: translateY(4px);
+            box-shadow: none;
+        }
+        .controls button:disabled {
+            opacity: 0.5;
+            transform: translateY(4px);
+            box-shadow: none;
+            pointer-events: none;
+        }
+        .controls label {
+            color: #ddd;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .controls input[type="number"] {
+            width: 60px;
+            padding: 4px 6px;
+            border-radius: 20px;
+            border: none;
+            text-align: center;
+            font-weight: bold;
+            background: #0f3460;
+            color: white;
+        }
+        .controls input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: #4ecca3;
+        }
+        #result {
+            color: #f1c40f;
+            font-size: 18px;
+            font-weight: bold;
+            min-width: 120px;
+            text-align: center;
+        }
+        .info-row {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            gap: 6px;
+            color: #aaa;
+        }
+        /* ---------- Класация ---------- */
+        .leaderboard {
+            background: #0f3460;
+            border-radius: 12px;
+            padding: 10px 16px;
+            width: 100%;
+            max-height: 160px;
+            overflow-y: auto;
+            color: #eee;
+            font-size: 14px;
+            margin-top: 4px;
+        }
+        .leaderboard h3 {
+            margin: 0 0 6px 0;
+            color: #4ecca3;
+            text-align: center;
+            font-size: 16px;
+        }
+        .leaderboard table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .leaderboard th {
+            color: #aaa;
+            font-weight: normal;
+            text-align: left;
+            padding: 2px 4px;
+            border-bottom: 1px solid #2a3a6a;
+        }
+        .leaderboard td {
+            padding: 2px 4px;
+            border-bottom: 1px solid #1e2e4e;
+        }
+        .leaderboard .rank {
+            color: #f1c40f;
+            font-weight: bold;
+            width: 30px;
+        }
+        .leaderboard .score-val {
+            color: #4ecca3;
+            font-weight: bold;
+        }
+        /* ---------- Име на играча ---------- */
+        .player-info {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            color: #ddd;
+            font-size: 14px;
+            margin-top: 2px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .player-info input {
+            background: #0f3460;
+            border: none;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 20px;
+            width: 160px;
+            font-size: 14px;
+        }
+        .player-info button {
+            background: #533483;
+            border: none;
+            color: white;
+            padding: 4px 14px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+        .player-info button:active {
+            opacity: 0.7;
+        }
+        /* ---------- Адаптивност ---------- */
+        @media screen and (max-width: 800px) {
+            .snakeBody {
+                grid-template-columns: repeat(15, 28px);
+                grid-template-rows: repeat(20, 28px);
+                gap: 2px;
+                padding: 4px;
+            }
+            .game-wrapper {
+                padding: 10px;
+                max-width: 98vw;
+            }
+            .controls button, .controls a {
+                font-size: 14px;
+                padding: 6px 14px;
+            }
+            .controls label {
+                font-size: 12px;
+            }
+            #result {
+                font-size: 16px;
+                min-width: 90px;
+            }
+            .player-info input {
+                width: 120px;
+            }
+        }
+        @media screen and (max-width: 500px) {
+            .snakeBody {
+                grid-template-columns: repeat(15, 18px);
+                grid-template-rows: repeat(20, 18px);
+                gap: 1px;
+                padding: 2px;
+            }
+        }
+        .leaderboard::-webkit-scrollbar {
+            width: 4px;
+        }
+        .leaderboard::-webkit-scrollbar-track {
+            background: #0f3460;
+        }
+        .leaderboard::-webkit-scrollbar-thumb {
+            background: #4ecca3;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="game-wrapper">
+    <div class="body">
+
+        <!-- Игрално поле -->
+        <div class="snakeBody" id="gameField"></div>
+
+        <!-- Информация -->
+        <div class="info-row">
+            <span id="result">Резултат: 0</span>
+            <span id="lengthInfo">Дължина: 3</span>
+            <span id="speedInfo">Скорост: 1×</span>
+        </div>
+
+        <!-- Контроли -->
+        <div class="controls">
+            <!-- Бутон Начало – води към основната страница -->
+            <a href="/" class="button" id="homeBtn">🏠 НАЧАЛО</a>
+            <!-- Забележка: ако играта е в подпапка, промени href на "index.html" или "../" -->
+
+            <button id="startBtn" class="button">СТАРТ</button>
+            <button id="pauseBtn" class="button" disabled>ПАУЗА</button>
+            <button id="resetBtn" class="button" disabled>РЕСТАРТ</button>
+
+            <label>Бууст: <input type="number" id="power" value="100" min="10" max="500"></label>
+            <label><input type="checkbox" id="obstaclesMode"> Препятствия</label>
+            <label><input type="checkbox" id="wallPassMode"> През стени</label>
+            <label><input type="checkbox" id="soundToggle" checked> Звук</label>
+        </div>
+
+        <!-- Име на играча -->
+        <div class="player-info">
+            <label>Вашето име:
+                <input type="text" id="playerName" maxlength="20" placeholder="Анонимен">
+            </label>
+            <button id="saveNameBtn">Запази име</button>
+        </div>
+
+        <!-- Класация -->
+        <div class="leaderboard" id="leaderboard">
+            <h3>🏆 Топ 10</h3>
+            <table>
+                <thead><tr><th>#</th><th>Играч</th><th>Точки</th></tr></thead>
+                <tbody id="leaderboardBody">
+                    <tr><td colspan="3" style="text-align:center;color:#666;">Зареждане...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+</div>
+
+<!-- ====================================================================== -->
+<!-- JavaScript – всичко в един модул                                       -->
+<!-- ====================================================================== -->
+<script type="module">
+// ---------- ИМПОРТИ ОТ FIREBASE ----------
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import {
+    getAuth,
+    signInAnonymously,
+    onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import {
+    getFirestore,
+    collection,
+    doc,
+    setDoc,
+    getDoc,
+    query,
+    orderBy,
+    limit,
+    getDocs,
+    serverTimestamp
+} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+const firebaseConfig = {
+    apiKey: "AIzaSyAGF9BsM0_OMADMYiTIpIFQ3rlWPQIcP-M",
+    authDomain: "atoms-32b0d.firebaseapp.com",
+    databaseURL: "https://atoms-32b0d-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "atoms-32b0d",
+    storageBucket: "atoms-32b0d.appspot.com",
+    messagingSenderId: "358321648052",
+    appId: "1:358321648052:web:2f58f230f8b1384121c2e1",
+    measurementId: "G-MFJNLQMEH2"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+// ---------- ГЛОБАЛНИ ПРОМЕНЛИВИ ----------
+const COLS = 15;
+const ROWS = 20;
+let gameInterval = null;
+let isPaused = false;
+let isRunning = false;
+let currentSpeed = 200;
+let boost = 100;
+
+let audioCtx = null;
+
+const settings = {
+    obstacles: false,
+    wallPass: false,
+    sound: true,
+};
+
+const snake = {
+    body: [],
+    position: 'right',
+    score: 0,
+    life: true,
+    price: '',
+    isBonus: false,
+    isPoison: false,
+    headId: '',
+};
+
+let obstacles = [];
+let currentUser = null;
+let playerName = localStorage.getItem('snakePlayerName') || 'Анонимен';
+
+// ---------- ИНИЦИАЛИЗАЦИЯ НА ПОЛЕТО ----------
+function buildField() {
+    const field = document.getElementById('gameField');
+    field.innerHTML = '';
+    for (let r = 1; r <= ROWS; r++) {
+        for (let c = 1; c <= COLS; c++) {
+            const div = document.createElement('div');
+            div.id = `${r}-${c}`;
+            div.className = 'snake';
+            field.appendChild(div);
+        }
+    }
+}
+buildField();
+
+// ---------- ПОМОЩНИ ФУНКЦИИ ----------
+function getCell(id) {
+    return document.getElementById(id);
+}
+
+function setClass(id, className) {
+    const el = getCell(id);
+    if (el) el.className = className;
+}
+
+function idToCoords(id) {
+    const [r, c] = id.split('-').map(Number);
+    return { r, c };
+}
+
+function coordsToId(r, c) {
+    return `${r}-${c}`;
+}
+
+function randomInt(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+// ---------- ЗВУКОВИ ЕФЕКТИ ----------
+function initAudio() {
+    if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+}
+
+function playTone(freq, duration, type = 'sine', volume = 0.3) {
+    if (!settings.sound) return;
+    try {
+        initAudio();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(volume, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+    } catch (_) { /* silent fail */ }
+}
+
+function soundEat()    { playTone(600, 0.1, 'sine', 0.2); }
+function soundBonus()  { playTone(900, 0.15, 'square', 0.15); setTimeout(() => playTone(1200, 0.15, 'square', 0.15), 100); }
+function soundPoison() { playTone(200, 0.3, 'sawtooth', 0.25); }
+function soundGameOver(){ playTone(150, 0.5, 'sawtooth', 0.3); }
+function soundWall()   { playTone(400, 0.08, 'sine', 0.1); }
+
+// ---------- ГЕНЕРИРАНЕ НА ХРАНА ----------
+function generateFood() {
+    let x, y, id;
+    let attempts = 0;
+    do {
+        x = randomInt(1, COLS);
+        y = randomInt(1, ROWS);
+        id = coordsToId(y, x);
+        attempts++;
+        if (attempts > 1000) break;
+    } while (
+        snake.body.includes(id) ||
+        obstacles.includes(id) ||
+        id === snake.price
+    );
+
+    if (attempts > 1000) {
+        snake.life = false;
+        return;
+    }
+
+    const rand = Math.random();
+    let isBonus = false;
+    let isPoison = false;
+
+    if (rand < 0.12) isBonus = true;
+    else if (rand < 0.20) isPoison = true;
+
+    const el = getCell(id);
+    if (el) {
+        if (isBonus) el.className = 'snakeBonusBall';
+        else if (isPoison) el.className = 'snakePoisonBall';
+        else el.className = 'snakeBall';
+    }
+
+    snake.price = id;
+    snake.isBonus = isBonus;
+    snake.isPoison = isPoison;
+}
+
+// ---------- ГЕНЕРИРАНЕ НА ПРЕПЯТСТВИЯ ----------
+function generateObstacles(count = 7) {
+    obstacles = [];
+    for (let i = 0; i < count; i++) {
+        let id;
+        let attempts = 0;
+        do {
+            const x = randomInt(1, COLS);
+            const y = randomInt(1, ROWS);
+            id = coordsToId(y, x);
+            attempts++;
+        } while (
+            (snake.body.includes(id) || obstacles.includes(id) || id === snake.price) &&
+            attempts < 200
+        );
+        if (!snake.body.includes(id) && !obstacles.includes(id) && id !== snake.price) {
+            obstacles.push(id);
+            setClass(id, 'snakeObstacle');
+        }
+    }
+}
+
+// ---------- ИНИЦИАЛИЗАЦИЯ НА ЗМИЯТА ----------
+function initSnake() {
+    snake.body = ['10-7', '10-6', '10-5'];
+    snake.position = 'right';
+    snake.score = 0;
+    snake.life = true;
+    snake.price = '';
+    snake.isBonus = false;
+    snake.isPoison = false;
+    for (let r = 1; r <= ROWS; r++) {
+        for (let c = 1; c <= COLS; c++) {
+            const id = coordsToId(r, c);
+            if (obstacles.includes(id)) setClass(id, 'snakeObstacle');
+            else setClass(id, 'snake');
+        }
+    }
+    snake.body.forEach((id, idx) => {
+        if (idx === 0) setClass(id, 'snakeHead');
+        else setClass(id, 'snakeMove');
+    });
+    if (snake.price) {
+        const old = getCell(snake.price);
+        if (old && !obstacles.includes(snake.price)) old.className = 'snake';
+    }
+    obstacles.forEach(id => setClass(id, 'snakeObstacle'));
+    updateUI();
+}
+
+// ---------- ДВИЖЕНИЕ ----------
+function move() {
+    if (isPaused || !snake.life) return;
+
+    const bodyCopy = [...snake.body];
+    const tail = bodyCopy.pop();
+
+    let headCoords = idToCoords(bodyCopy[0]);
+    let newR = headCoords.r;
+    let newC = headCoords.c;
+
+    switch (snake.position) {
+        case 'right': newC++; break;
+        case 'left':  newC--; break;
+        case 'down':  newR++; break;
+        case 'up':    newR--; break;
+    }
+
+    if (settings.wallPass) {
+        if (newC < 1) newC = COLS;
+        else if (newC > COLS) newC = 1;
+        if (newR < 1) newR = ROWS;
+        else if (newR > ROWS) newR = 1;
+        if (newC !== headCoords.c || newR !== headCoords.r) soundWall();
+    } else {
+        if (newC < 1 || newC > COLS || newR < 1 || newR > ROWS) {
+            gameOver();
+            return;
+        }
+    }
+
+    const newHeadId = coordsToId(newR, newC);
+
+    if (settings.obstacles && obstacles.includes(newHeadId)) {
+        gameOver();
+        return;
+    }
+
+    if (bodyCopy.includes(newHeadId) && newHeadId !== tail) {
+        gameOver();
+        return;
+    }
+
+    let ate = false;
+    if (newHeadId === snake.price) {
+        ate = true;
+        if (snake.isBonus) {
+            snake.score += Math.round(30 * (boost / 100));
+            soundBonus();
+            if (gameInterval) {
+                clearInterval(gameInterval);
+                const bonusSpeed = Math.max(50, currentSpeed * 0.6);
+                gameInterval = setInterval(move, bonusSpeed);
+                setTimeout(() => {
+                    if (gameInterval) {
+                        clearInterval(gameInterval);
+                        gameInterval = setInterval(move, currentSpeed);
+                    }
+                }, 2000);
+            }
+        } else if (snake.isPoison) {
+            snake.score = Math.max(0, snake.score - 20);
+            soundPoison();
+            if (snake.body.length > 3) {
+                const removed = snake.body.pop();
+                setClass(removed, 'snake');
+            }
+            setClass(snake.price, 'snake');
+        } else {
+            snake.score += Math.round(10 * (boost / 100));
+            soundEat();
+        }
+
+        document.getElementById('result').textContent = `Резултат: ${snake.score}`;
+        generateFood();
+        if (!snake.price) {
+            gameOver(true);
+            return;
+        }
+        bodyCopy.push(tail);
+    }
+
+    if (!ate) {
+        if (tail) setClass(tail, 'snake');
+    }
+
+    bodyCopy.unshift(newHeadId);
+    snake.body = bodyCopy;
+
+    snake.body.forEach((id, idx) => {
+        if (idx === 0) setClass(id, 'snakeHead');
+        else setClass(id, 'snakeMove');
+    });
+
+    updateUI();
+}
+
+// ---------- КРАЙ НА ИГРАТА ----------
+async function gameOver(win = false) {
+    if (!snake.life) return;
+    snake.life = false;
+    clearInterval(gameInterval);
+    gameInterval = null;
+    isRunning = false;
+    document.getElementById('pauseBtn').disabled = true;
+    document.getElementById('startBtn').disabled = false;
+    document.getElementById('resetBtn').disabled = false;
+
+    soundGameOver();
+
+    const msg = win ? '🎉 ПОБЕДА! Всички клетки са запълнени!' : '💀 Играта свърши!';
+    document.getElementById('result').textContent = `${msg} Точки: ${snake.score}`;
+
+    if (currentUser && snake.score > 0) {
+        await saveScoreIfTop10(snake.score);
+    }
+
+    loadLeaderboard();
+}
+
+// ---------- ЗАПИС В FIREBASE (само ако е в Топ 10) ----------
+async function saveScoreIfTop10(score) {
+    if (!currentUser) return;
+
+    const userDocRef = doc(db, 'scores', currentUser.uid);
+    let userDocSnap = await getDoc(userDocRef);
+    let existingScore = userDocSnap.exists() ? userDocSnap.data().score : -1;
+
+    if (existingScore >= score) {
+        console.log('Новият резултат не е по-висок от текущия, няма запис.');
+        return;
+    }
+
+    const topScores = await getTopScores(10);
+    if (topScores.length < 10) {
+        await setDoc(userDocRef, {
+            userId: currentUser.uid,
+            displayName: playerName,
+            score: score,
+            boost: boost,
+            obstacles: settings.obstacles,
+            wallPass: settings.wallPass,
+            timestamp: serverTimestamp()
+        }, { merge: true });
+        console.log('Резултатът е записан (по-малко от 10 записа).');
+        return;
+    }
+
+    const lowestInTop = topScores[topScores.length-1].score;
+    if (score > lowestInTop) {
+        await setDoc(userDocRef, {
+            userId: currentUser.uid,
+            displayName: playerName,
+            score: score,
+            boost: boost,
+            obstacles: settings.obstacles,
+            wallPass: settings.wallPass,
+            timestamp: serverTimestamp()
+        }, { merge: true });
+        console.log('Резултатът е записан (влиза в топ 10).');
+    } else {
+        console.log('Резултатът не е в топ 10, няма запис.');
+    }
+}
+
+// ---------- ПОМОЩНА ФУНКЦИЯ ЗА ТОП N ----------
+async function getTopScores(limitCount = 10) {
+    try {
+        const q = query(collection(db, 'scores'), orderBy('score', 'desc'), limit(limitCount));
+        const snapshot = await getDocs(q);
+        const results = [];
+        snapshot.forEach(doc => {
+            results.push({ id: doc.id, ...doc.data() });
+        });
+        return results;
+    } catch (e) {
+        console.warn('Грешка при зареждане на топ резултати:', e);
+        return [];
+    }
+}
+
+// ---------- ЗАРЕЖДАНЕ НА КЛАСАЦИЯ ----------
+async function loadLeaderboard() {
+    const tbody = document.getElementById('leaderboardBody');
+    try {
+        const top = await getTopScores(10);
+        if (top.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:#666;">Все още няма резултати</td></tr>';
+            return;
+        }
+        let html = '';
+        top.forEach((item, index) => {
+            const rank = index + 1;
+            const name = item.displayName || 'Анонимен';
+            const score = item.score || 0;
+            html += `<tr>
+                <td class="rank">${rank}</td>
+                <td>${name}</td>
+                <td class="score-val">${score}</td>
+            </tr>`;
+        });
+        tbody.innerHTML = html;
+    } catch (e) {
+        tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:#666;">Грешка при зареждане</td></tr>';
+        console.warn('Грешка при зареждане на класация:', e);
+    }
+}
+
+// ---------- ОБНОВЯВАНЕ НА UI ----------
+function updateUI() {
+    document.getElementById('result').textContent = `Резултат: ${snake.score}`;
+    document.getElementById('lengthInfo').textContent = `Дължина: ${snake.body.length}`;
+    const speedFactor = currentSpeed ? (200 / currentSpeed).toFixed(1) : '1.0';
+    document.getElementById('speedInfo').textContent = `Скорост: ${speedFactor}×`;
+}
+
+// ---------- СТАРТ ----------
+function startGame() {
+    if (isRunning) return;
+    initAudio();
+
+    const powerInput = document.getElementById('power');
+    let raw = parseFloat(powerInput.value);
+    boost = isNaN(raw) || raw < 1 ? 100 : Math.min(raw, 500);
+    powerInput.value = boost;
+
+    settings.obstacles = document.getElementById('obstaclesMode').checked;
+    settings.wallPass = document.getElementById('wallPassMode').checked;
+    settings.sound = document.getElementById('soundToggle').checked;
+
+    initSnake();
+
+    if (settings.obstacles) generateObstacles(7);
+    else {
+        obstacles = [];
+        for (let r = 1; r <= ROWS; r++) {
+            for (let c = 1; c <= COLS; c++) {
+                const id = coordsToId(r, c);
+                if (!snake.body.includes(id) && id !== snake.price) setClass(id, 'snake');
+            }
+        }
+    }
+
+    generateFood();
+
+    currentSpeed = Math.max(50, 200 / (boost / 100));
+    if (gameInterval) clearInterval(gameInterval);
+    gameInterval = setInterval(move, currentSpeed);
+    isRunning = true;
+    isPaused = false;
+    snake.life = true;
+
+    document.getElementById('startBtn').disabled = true;
+    document.getElementById('pauseBtn').disabled = false;
+    document.getElementById('pauseBtn').textContent = 'ПАУЗА';
+    document.getElementById('resetBtn').disabled = false;
+
+    updateUI();
+}
+
+// ---------- ПАУЗА / ПРОДЪЛЖЕНИЕ ----------
+function togglePause() {
+    if (!isRunning || !snake.life) return;
+    isPaused = !isPaused;
+    const btn = document.getElementById('pauseBtn');
+    btn.textContent = isPaused ? 'ПРОДЪЛЖИ' : 'ПАУЗА';
+    if (isPaused) {
+        if (gameInterval) {
+            clearInterval(gameInterval);
+            gameInterval = null;
+        }
+    } else {
+        if (!gameInterval) {
+            gameInterval = setInterval(move, currentSpeed);
+        }
+    }
+}
+
+// ---------- РЕСТАРТ ----------
+function resetGame() {
+    if (gameInterval) {
+        clearInterval(gameInterval);
+        gameInterval = null;
+    }
+    isRunning = false;
+    isPaused = false;
+    document.getElementById('startBtn').disabled = false;
+    document.getElementById('pauseBtn').disabled = true;
+    document.getElementById('pauseBtn').textContent = 'ПАУЗА';
+    document.getElementById('resetBtn').disabled = true;
+
+    initSnake();
+    obstacles = [];
+    for (let r = 1; r <= ROWS; r++) {
+        for (let c = 1; c <= COLS; c++) {
+            setClass(coordsToId(r, c), 'snake');
+        }
+    }
+    if (snake.price) {
+        const old = getCell(snake.price);
+        if (old) old.className = 'snake';
+        snake.price = '';
+    }
+    snake.score = 0;
+    document.getElementById('result').textContent = 'Резултат: 0';
+    updateUI();
+}
+
+// ---------- НАСТРОЙКА НА КЛАВИАТУРА И ТЪЧ ----------
+function setupControls() {
+    window.addEventListener('keydown', (e) => {
+        const key = e.key;
+        if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(key)) {
+            e.preventDefault();
+            if (!isRunning || isPaused || !snake.life) return;
+            switch (key) {
+                case 'ArrowRight': if (snake.position !== 'left') snake.position = 'right'; break;
+                case 'ArrowLeft':  if (snake.position !== 'right') snake.position = 'left'; break;
+                case 'ArrowUp':    if (snake.position !== 'down') snake.position = 'up'; break;
+                case 'ArrowDown':  if (snake.position !== 'up') snake.position = 'down'; break;
+            }
+        }
+        if (key === ' ' || key === 'Space') {
+            e.preventDefault();
+            if (isRunning && snake.life) togglePause();
+        }
+    });
+
+    let touchStartX = 0, touchStartY = 0;
+    const field = document.getElementById('gameField');
+    field.addEventListener('touchstart', (e) => {
+        const t = e.touches[0];
+        touchStartX = t.clientX;
+        touchStartY = t.clientY;
+        e.preventDefault();
+    }, { passive: false });
+
+    field.addEventListener('touchmove', (e) => {
+        e.preventDefault();
+        if (!isRunning || isPaused || !snake.life || e.touches.length !== 1) return;
+        const t = e.touches[0];
+        const dx = t.clientX - touchStartX;
+        const dy = t.clientY - touchStartY;
+        if (Math.abs(dx) < 20 && Math.abs(dy) < 20) return;
+        if (Math.abs(dx) > Math.abs(dy)) {
+            if (dx > 0 && snake.position !== 'left') snake.position = 'right';
+            else if (dx < 0 && snake.position !== 'right') snake.position = 'left';
+        } else {
+            if (dy > 0 && snake.position !== 'up') snake.position = 'down';
+            else if (dy < 0 && snake.position !== 'down') snake.position = 'up';
+        }
+        touchStartX = t.clientX;
+        touchStartY = t.clientY;
+    }, { passive: false });
+
+    field.addEventListener('touchend', (e) => {
+        e.preventDefault();
+    }, { passive: false });
+}
+
+// ---------- FIREBASE АВТЕНТИКАЦИЯ ----------
+signInAnonymously(auth).catch(console.warn);
+
+onAuthStateChanged(auth, (user) => {
+    if (user) {
+        currentUser = user;
+        console.log('Анонимен вход успешен:', user.uid);
+        loadLeaderboard();
+    } else {
+        currentUser = null;
+        document.getElementById('leaderboardBody').innerHTML = '<tr><td colspan="3" style="text-align:center;color:#666;">Няма връзка с Firebase</td></tr>';
+    }
+});
+
+// ---------- ЗАРЕЖДАНЕ НА НАСТРОЙКИТЕ ОТ LOCALSTORAGE ----------
+function loadSettings() {
+    try {
+        const saved = localStorage.getItem('snakeSettings');
+        if (saved) {
+            const data = JSON.parse(saved);
+            if (data.obstacles) document.getElementById('obstaclesMode').checked = true;
+            if (data.wallPass) document.getElementById('wallPassMode').checked = true;
+            if (data.sound !== undefined) document.getElementById('soundToggle').checked = data.sound;
+            if (data.boost) document.getElementById('power').value = data.boost;
+        }
+    } catch (_) {}
+}
+
+function saveSettings() {
+    try {
+        const data = {
+            obstacles: document.getElementById('obstaclesMode').checked,
+            wallPass: document.getElementById('wallPassMode').checked,
+            sound: document.getElementById('soundToggle').checked,
+            boost: document.getElementById('power').value
+        };
+        localStorage.setItem('snakeSettings', JSON.stringify(data));
+    } catch (_) {}
+}
+
+document.querySelectorAll('.controls input').forEach(el => {
+    el.addEventListener('change', saveSettings);
+});
+
+// ---------- ИМЕ НА ИГРАЧА ----------
+document.getElementById('playerName').value = playerName;
+document.getElementById('saveNameBtn').addEventListener('click', () => {
+    const name = document.getElementById('playerName').value.trim() || 'Анонимен';
+    playerName = name;
+    localStorage.setItem('snakePlayerName', name);
+    alert('Името е запазено!');
+});
+
+// ---------- СВЪРЗВАНЕ НА БУТОНИТЕ ----------
+document.getElementById('startBtn').addEventListener('click', startGame);
+document.getElementById('pauseBtn').addEventListener('click', togglePause);
+document.getElementById('resetBtn').addEventListener('click', resetGame);
+
+// ---------- СТАРТИРАНЕ ----------
+loadSettings();
+initSnake();
+setupControls();
+document.getElementById('pauseBtn').disabled = true;
+document.getElementById('resetBtn').disabled = true;
+loadLeaderboard();
+
+console.log('🐍 Snake играта е заредена! Натисни СТАРТ.');
+</script>
+</body>
+</html>

@@ -1,0 +1,1440 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Не се сърди човече (Ludo)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      overflow: hidden;
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #0f172a;
+      color: white;
+    }
+    #app {
+      display: flex;
+      flex-direction: column;
+      height: 100dvh;
+      overflow: hidden;
+    }
+    header {
+      flex-shrink: 0;
+      background: #1e293b;
+      border-bottom: 1px solid #334155;
+      padding: 0.75rem 1rem;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.5rem;
+      z-index: 10;
+    }
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* Всички екрани – скрити по подразбиране, активният е flex */
+    .screen {
+      display: none;
+      flex-direction: column;
+      flex: 1;
+      overflow-y: auto;
+      padding: 1rem;
+      gap: 0.5rem;
+    }
+    .screen.active {
+      display: flex;
+    }
+
+    /* Лоби и стая – центриране */
+    #lobby-screen, #room-screen {
+      align-items: center;
+      justify-content: flex-start;
+    }
+
+    /* Игровият екран – съдържа .game-layout */
+    #game-screen {
+      padding: 0.5rem;
+    }
+    #game-screen .game-layout {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      max-width: 1200px;
+      margin: 0 auto;
+      width: 100%;
+      flex: 1 0 auto;
+      min-height: 0; /* important for flex children to shrink */
+    }
+
+    .board-area {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      flex-shrink: 0;
+    }
+
+    /* Текст за ход – винаги видим */
+    #turn-text {
+      background: #1e293b;
+      padding: 0.5rem 1rem;
+      border-radius: 1.5rem;
+      font-size: 1.25rem;
+      font-weight: 700;
+      text-align: center;
+      min-height: 3rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      max-width: 500px;
+      margin: 0 auto 0.75rem auto;
+      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.3);
+      flex-shrink: 0;
+    }
+    @media (min-width: 768px) {
+      #turn-text {
+        font-size: 1.75rem;
+        min-height: 4rem;
+        padding: 0.75rem 1.5rem;
+      }
+    }
+
+    .board-wrapper {
+      width: 100%;
+      max-width: 500px;
+      margin: 0 auto;
+    }
+    .board-wrapper .aspect-sq {
+      aspect-ratio: 1 / 1;
+      width: 100%;
+      background: #f1f5f9;
+      border-radius: 1.5rem;
+      overflow: hidden;
+      box-shadow: 0 0 0 4px #1e293b, 0 20px 25px -5px rgba(0,0,0,0.8);
+    }
+    #board {
+      width: 100% !important;
+      height: 100% !important;
+      display: block;
+      cursor: pointer;
+    }
+
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      flex-shrink: 0;
+      width: 100%;
+      max-width: 350px;
+      margin: 0 auto;
+    }
+    .sidebar .player-list {
+      max-height: 200px;
+      overflow-y: auto;
+      background: #1e293b;
+      border-radius: 1rem;
+      padding: 0.5rem;
+    }
+    .player-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.25rem 0.5rem;
+      border-radius: 0.5rem;
+      font-size: 0.875rem;
+    }
+    .player-item.active-turn { background: #334155; }
+
+    .chat-box {
+      display: flex;
+      flex-direction: column;
+      background: #1e293b;
+      border-radius: 1rem;
+      overflow: hidden;
+      min-height: 180px;
+      flex: 1;
+    }
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0.5rem;
+      scroll-behavior: smooth;
+      max-height: 300px;
+    }
+    .chat-input-row {
+      display: flex;
+      gap: 0.5rem;
+      padding: 0.5rem;
+      border-top: 1px solid #334155;
+      flex-shrink: 0;
+    }
+    .chat-input-row input {
+      flex: 1;
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 0.5rem;
+      padding: 0.4rem 0.75rem;
+      color: white;
+      font-size: 0.875rem;
+      outline: none;
+    }
+    .chat-input-row input:focus { border-color: #6366f1; }
+    .chat-input-row button {
+      background: #6366f1;
+      border: none;
+      border-radius: 0.5rem;
+      padding: 0.4rem 0.75rem;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .chat-input-row button:hover { background: #4f46e5; }
+
+    .dice-btn {
+      background: #6366f1;
+      border: none;
+      border-radius: 1.5rem;
+      padding: 0.75rem 2rem;
+      font-size: 1.25rem;
+      font-weight: bold;
+      color: white;
+      box-shadow: 0 6px 0 #3730a3;
+      transition: all 0.1s ease;
+      cursor: pointer;
+    }
+    .dice-btn:active { transform: translateY(4px); box-shadow: 0 2px 0 #3730a3; }
+    .dice-btn:disabled { opacity: 0.5; transform: translateY(4px); box-shadow: 0 2px 0 #3730a3; pointer-events: none; }
+
+    .overlay {
+      transition: opacity 0.25s ease;
+    }
+    .overlay.hidden {
+      opacity: 0 !important;
+      pointer-events: none !important;
+    }
+
+    /* ===== DESKTOP ===== */
+    @media (min-width: 768px) {
+      #game-screen .game-layout {
+        flex-direction: row;
+        align-items: stretch;
+        height: 100%;
+        padding: 0.5rem;
+      }
+      .board-area {
+        flex: 1;
+        justify-content: flex-start;
+      }
+      .sidebar {
+        width: 280px;
+        max-width: 280px;
+        flex-shrink: 0;
+        height: 100%;
+        overflow-y: auto;
+      }
+      .chat-box { min-height: 200px; }
+      .chat-messages { max-height: 350px; }
+      .sidebar .player-list { max-height: 250px; }
+    }
+
+    /* ===== MOBILE ===== */
+    @media (max-width: 767px) {
+      #game-screen .game-layout {
+        flex-direction: column;
+        gap: 0.75rem;
+        padding-bottom: 2rem;
+      }
+      .sidebar {
+        flex: 1;
+        max-width: 100%;
+        overflow-y: visible;
+        gap: 0.5rem;
+      }
+      .chat-box {
+        min-height: 220px;
+        flex: 1;
+      }
+      .chat-messages {
+        max-height: 45vh;
+        flex: 1;
+      }
+      .sidebar .player-list {
+        max-height: 150px;
+      }
+    }
+
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #475569; border-radius: 10px; }
+    ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+
+    .screen { scroll-behavior: smooth; }
+    #game-screen { -webkit-overflow-scrolling: touch; }
+  </style>
+
+  <script type="module">
+    // ------------------------------------------------------------------
+    // 1. IMPORTS & CONFIG (НЕПРОМЕНЕНИ)
+    // ------------------------------------------------------------------
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import {
+      getAuth,
+      signInAnonymously,
+      signInWithCustomToken,
+      onAuthStateChanged
+    } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import {
+      getFirestore,
+      doc,
+      setDoc,
+      updateDoc,
+      deleteDoc,
+      onSnapshot,
+      collection,
+      arrayUnion,
+      runTransaction
+    } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAGF9BsM0_OMADMYiTIpIFQ3rlWPQIcP-M",
+      authDomain: "atoms-32b0d.firebaseapp.com",
+      databaseURL: "https://atoms-32b0d-default-rtdb.europe-west1.firebasedatabase.app",
+      projectId: "atoms-32b0d",
+      storageBucket: "atoms-32b0d.appspot.com",
+      messagingSenderId: "358321648052",
+      appId: "1:358321648052:web:2f58f230f8b1384121c2e1",
+      measurementId: "G-MFJNLQMEH2"
+    };
+
+    const APP_ID = 'ludo-bg-v1';
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    // ------------------------------------------------------------------
+    // 2. STATE
+    // ------------------------------------------------------------------
+    let myUserId = null;
+    let myName = localStorage.getItem('ludo_name') || 'Гост_' + Math.floor(Math.random() * 1000);
+    let currentRoomId = null;
+    let room = null;
+    let myColor = null;
+    let isSpectator = false;
+    let gameStarted = false;
+    let unsubRoom = null;
+    let unsubLobby = null;
+    let canvas, ctx, cellSize;
+    let roomDeletionTimer = null;
+
+    const colorsHex = { red: '#ef4444', blue: '#3b82f6', green: '#22c55e', yellow: '#eab308' };
+    const order = ['red', 'blue', 'green', 'yellow'];
+    const colorNames = { red: 'Червено', blue: 'Синьо', green: 'Зелено', yellow: 'Жълто' };
+
+    // Board geometry (unchanged)
+    const ring = [
+      { x:1, y:6 }, { x:2, y:6 }, { x:3, y:6 }, { x:4, y:6 }, { x:5, y:6 },
+      { x:6, y:5 }, { x:6, y:4 }, { x:6, y:3 }, { x:6, y:2 }, { x:6, y:1 }, { x:6, y:0 },
+      { x:7, y:0 },
+      { x:8, y:0 }, { x:8, y:1 }, { x:8, y:2 }, { x:8, y:3 }, { x:8, y:4 }, { x:8, y:5 },
+      { x:9, y:6 }, { x:10, y:6 }, { x:11, y:6 }, { x:12, y:6 }, { x:13, y:6 }, { x:14, y:6 },
+      { x:14, y:7 },
+      { x:14, y:8 }, { x:13, y:8 }, { x:12, y:8 }, { x:11, y:8 }, { x:10, y:8 }, { x:9, y:8 },
+      { x:8, y:9 }, { x:8, y:10 }, { x:8, y:11 }, { x:8, y:12 }, { x:8, y:13 }, { x:8, y:14 },
+      { x:7, y:14 },
+      { x:6, y:14 }, { x:6, y:13 }, { x:6, y:12 }, { x:6, y:11 }, { x:6, y:10 }, { x:6, y:9 },
+      { x:5, y:8 }, { x:4, y:8 }, { x:3, y:8 }, { x:2, y:8 }, { x:1, y:8 }, { x:0, y:8 },
+      { x:0, y:7 }, { x:0, y:6 }
+    ];
+
+    const homePaths = {
+      red:    [{ x:1, y:7 }, { x:2, y:7 }, { x:3, y:7 }, { x:4, y:7 }, { x:5, y:7 }],
+      blue:   [{ x:7, y:1 }, { x:7, y:2 }, { x:7, y:3 }, { x:7, y:4 }, { x:7, y:5 }],
+      green:  [{ x:13, y:7 }, { x:12, y:7 }, { x:11, y:7 }, { x:10, y:7 }, { x:9, y:7 }],
+      yellow: [{ x:7, y:13 }, { x:7, y:12 }, { x:7, y:11 }, { x:7, y:10 }, { x:7, y:9 }]
+    };
+
+    const bases = {
+      red:    [{ x:1, y:1 }, { x:4, y:1 }, { x:1, y:4 }, { x:4, y:4 }],
+      blue:   [{ x:10, y:1 }, { x:13, y:1 }, { x:10, y:4 }, { x:13, y:4 }],
+      green:  [{ x:10, y:10 }, { x:13, y:10 }, { x:10, y:13 }, { x:13, y:13 }],
+      yellow: [{ x:1, y:10 }, { x:4, y:10 }, { x:1, y:13 }, { x:4, y:13 }]
+    };
+
+    const startPos = { red: 0, blue: 13, green: 26, yellow: 39 };
+    const safeZones = [0, 13, 26, 39];
+
+    let piecesRenderState = {
+      red:    [{ x:0, y:0 }, { x:0, y:0 }, { x:0, y:0 }, { x:0, y:0 }],
+      blue:   [{ x:0, y:0 }, { x:0, y:0 }, { x:0, y:0 }, { x:0, y:0 }],
+      green:  [{ x:0, y:0 }, { x:0, y:0 }, { x:0, y:0 }, { x:0, y:0 }],
+      yellow: [{ x:0, y:0 }, { x:0, y:0 }, { x:0, y:0 }, { x:0, y:0 }]
+    };
+
+    // ------------------------------------------------------------------
+    // 3. AUTH & LOBBY (НЕПРОМЕНЕНИ)
+    // ------------------------------------------------------------------
+    onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        myUserId = user.uid;
+        document.getElementById('input-nickname').value = myName;
+        initLobby();
+      }
+    });
+
+    async function doAuth() {
+      try {
+        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+          await signInWithCustomToken(auth, __initial_auth_token);
+        } else {
+          await signInAnonymously(auth);
+        }
+      } catch (e) {
+        console.error("Auth error:", e);
+        alert('⚠️ Грешка при свързване с Firebase. Моля, включете анонимен вход в конзолата на Firebase.');
+      }
+    }
+
+    function initLobby() {
+      switchScreen('lobby-screen');
+      const roomsRef = collection(db, 'artifacts', APP_ID, 'public', 'data', 'rooms');
+      if (unsubLobby) unsubLobby();
+      unsubLobby = onSnapshot(roomsRef, (snap) => {
+        const list = document.getElementById('rooms-list');
+        list.innerHTML = '';
+        let has = false;
+        snap.forEach(docSnap => {
+          const r = docSnap.data();
+          const isMyRoom = r.players && Object.values(r.players).some(p => p && p.id === myUserId);
+          if (r.status === 'lobby' || (r.status === 'playing' && isMyRoom) || (r.status === 'won' && isMyRoom)) {
+            has = true;
+            const pCount = Object.values(r.players).filter(p => p).length;
+            const li = document.createElement('li');
+            li.className = "bg-slate-800 p-4 rounded-xl shadow border border-slate-700 flex justify-between items-center";
+            li.innerHTML = `
+              <div>
+                <div class="font-bold text-lg text-white">${r.hostName || 'Стая'} (${docSnap.id.substring(0,4)})</div>
+                <div class="text-sm text-slate-400">${pCount}/4 играчи ${r.status === 'playing' ? '⏳' : ''} ${r.status === 'won' ? '🏆' : ''}</div>
+              </div>
+              <button onclick="joinRoom('${docSnap.id}')" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg font-bold transition">
+                Влез
+              </button>
+            `;
+            list.appendChild(li);
+          }
+        });
+        if (!has) list.innerHTML = '<div class="text-slate-400 text-center py-4">Няма свободни стаи. Създай нова!</div>';
+      });
+    }
+
+    function switchScreen(screenId) {
+      document.querySelectorAll('.screen').forEach(el => {
+        el.classList.toggle('active', el.id === screenId);
+      });
+      if (screenId === 'game-screen') {
+        setTimeout(() => resizeCanvas(), 100);
+        setTimeout(() => resizeCanvas(), 300);
+      }
+    }
+
+    window.goHome = function() {
+      if (currentRoomId) leaveRoomLocally();
+      else initLobby();
+    };
+
+    window.goExit = function() {
+      if (currentRoomId) {
+        if (myColor) {
+          const roomRef = doc(db, 'artifacts', APP_ID, 'public', 'data', 'rooms', currentRoomId);
+          updateDoc(roomRef, {
+            [`players.${myColor}.connected`]: false,
+            [`players.${myColor}.isBot`]: true
+          }).catch(() => {});
+        }
+        if (room && room.hostId === myUserId) {
+          const activePlayers = order.filter(c => room.players[c] && room.players[c].id !== myUserId && room.players[c].connected && !room.players[c].isBot);
+          if (activePlayers.length > 0) {
+            const newHostId = room.players[activePlayers[0]].id;
+            const roomRef = doc(db, 'artifacts', APP_ID, 'public', 'data', 'rooms', currentRoomId);
+            updateDoc(roomRef, { hostId: newHostId }).catch(() => {});
+          } else {
+            const roomRef = doc(db, 'artifacts', APP_ID, 'public', 'data', 'rooms', currentRoomId);
+            deleteDoc(roomRef).catch(() => {});
+          }
+        }
+      }
+      window.location.href = 'index.html';
+    };
+
+    window.saveName = function() {
+      const input = document.getElementById('input-nickname').value.trim();
+      if (input) { myName = input; localStorage.setItem('ludo_name', myName); alert('✅ Името е запазено!'); }
+    };
+
+    window.createRoom = async function() {
+      if (!myUserId) return;
+      const newRoomRef = doc(collection(db, 'artifacts', APP_ID, 'public', 'data', 'rooms'));
+      await setDoc(newRoomRef, {
+        status: 'lobby',
+        hostId: myUserId,
+        hostName: myName,
+        players: {
+          red:    { id: myUserId, name: myName, isBot: false, isAFK: false, connected: true, lastActive: Date.now() },
+          blue:   null,
+          green:  null,
+          yellow: null
+        },
+        pieces: {
+          red:    [-1, -1, -1, -1],
+          blue:   [-1, -1, -1, -1],
+          green:  [-1, -1, -1, -1],
+          yellow: [-1, -1, -1, -1]
+        },
+        turn: 'red',
+        dice: null,
+        diceRolledBy: null,
+        consecutiveSixes: 0,
+        rollsThisTurn: 0,
+        lastMoveTime: Date.now(),
+        chat: [],
+        winner: null
+      });
+      joinRoom(newRoomRef.id);
+    };
+
+    window.joinRoom = async function(roomId) {
+      if (unsubLobby) { unsubLobby(); unsubLobby = null; }
+      currentRoomId = roomId;
+      myColor = null;
+      isSpectator = false;
+      gameStarted = false;
+
+      const roomRef = doc(db, 'artifacts', APP_ID, 'public', 'data', 'rooms', roomId);
+      if (unsubRoom) unsubRoom();
+      unsubRoom = onSnapshot(roomRef, async (snap) => {
+        if (!snap.exists()) { alert('Стаята изчезна.'); leaveRoomLocally(); return; }
+        room = snap.data();
+        room.id = snap.id;
+
+        const existing = Object.keys(room.players).find(c => room.players[c] && room.players[c].id === myUserId);
+        if (room.status === 'playing' && !existing) {
+          alert('Играта вече е започнала. Не може да се присъедините.');
+          leaveRoomLocally();
+          return;
+        }
+
+        if (existing) {
+          myColor = existing;
+          isSpectator = false;
+        } else {
+          await tryAutoJoin(roomRef);
+        }
+        updateRoomUI();
+      }, err => console.error('Room sync error:', err));
+    };
+
+    async function tryAutoJoin(roomRef) {
+      if (!room) return;
+      if (room.status === 'playing') return;
+      const freeColor = order.find(c => room.players[c] === null);
+      if (freeColor) {
+        try {
+          await runTransaction(db, async (transaction) => {
+            const ref = roomRef;
+            const snap = await transaction.get(ref);
+            if (!snap.exists) return;
+            const data = snap.data();
+            if (data.players[freeColor] === null) {
+              transaction.update(ref, {
+                [`players.${freeColor}`]: {
+                  id: myUserId,
+                  name: myName,
+                  isBot: false,
+                  isAFK: false,
+                  connected: true,
+                  lastActive: Date.now()
+                }
+              });
+            }
+          });
+        } catch (e) {
+          console.warn('Auto-join failed:', e);
+        }
+      } else {
+        isSpectator = true;
+        myColor = null;
+      }
+    }
+
+    window.takeSlot = async function(color) {
+      if (!currentRoomId) return;
+      const roomRef = doc(db, 'artifacts', APP_ID, 'public', 'data', 'rooms', currentRoomId);
+      try {
+        await runTransaction(db, async (transaction) => {
+          const ref = roomRef;
+          const snap = await transaction.get(ref);
+          if (!snap.exists) return;
+          const data = snap.data();
+          if (data.status === 'playing') {
+            throw new Error('Играта вече е започнала.');
+          }
+          if (myColor) {
+            transaction.update(ref, { [`players.${myColor}`]: null });
+          }
+          if (data.players[color] === null) {
+            transaction.update(ref, {
+              [`players.${color}`]: {
+                id: myUserId,
+                name: myName,
+                isBot: false,
+                isAFK: false,
+                connected: true,
+                lastActive: Date.now()
+              }
+            });
+          } else {
+            throw new Error('Слотът е зает.');
+          }
+        });
+      } catch (e) {
+        alert('Неуспешно заемане: ' + e.message);
+      }
+    };
+
+    window.addBot = async function(color) {
+      if (!currentRoomId) return;
+      const roomRef = doc(db, 'artifacts', APP_ID, 'public', 'data', 'rooms', currentRoomId);
+      await updateDoc(roomRef, {
+        [`players.${color}`]: {
+          id: 'bot_' + color,
+          name: 'Бот ' + colorNames[color],
+          isBot: true,
+          isAFK: false,
+          connected: true,
+          lastActive: Date.now()
+        }
+      });
+    };
+
+    window.leaveSlot = async function(color) {
+      if (!currentRoomId) return;
+      const roomRef = doc(db, 'artifacts', APP_ID, 'public', 'data', 'rooms', currentRoomId);
+      await updateDoc(roomRef, { [`players.${color}`]: null });
+      if (myColor === color) { myColor = null; isSpectator = true; }
+    };
+
+    window.startGame = async function() {
+      if (!currentRoomId) return;
+      const startTurn = order.find(c => room.players[c]);
+      const roomRef = doc(db, 'artifacts', APP_ID, 'public', 'data', 'rooms', currentRoomId);
+      await updateDoc(roomRef, {
+        status: 'playing',
+        turn: startTurn,
+        lastMoveTime: Date.now(),
+        consecutiveSixes: 0,
+        rollsThisTurn: 0,
+        dice: null,
+        diceRolledBy: null
+      });
+    };
+
+    window.leaveRoomLocally = function() {
+      if (unsubRoom) { unsubRoom(); unsubRoom = null; }
+      if (currentRoomId) {
+        if (room && room.hostId === myUserId) {
+          const activePlayers = order.filter(c => room.players[c] && room.players[c].id !== myUserId && room.players[c].connected && !room.players[c].isBot);
+          if (activePlayers.length > 0) {
+            const newHostId = room.players[activePlayers[0]].id;
+            const roomRef = doc(db, 'artifacts', APP_ID, 'public', 'data', 'rooms', currentRoomId);
+            updateDoc(roomRef, { hostId: newHostId }).catch(() => {});
+          } else {
+            const roomRef = doc(db, 'artifacts', APP_ID, 'public', 'data', 'rooms', currentRoomId);
+            deleteDoc(roomRef).catch(() => {});
+          }
+        }
+        if (myColor) {
+          const roomRef = doc(db, 'artifacts', APP_ID, 'public', 'data', 'rooms', currentRoomId);
+          updateDoc(roomRef, {
+            [`players.${myColor}.connected`]: false,
+            [`players.${myColor}.isBot`]: true
+          }).catch(() => {});
+        }
+      }
+      currentRoomId = null;
+      myColor = null;
+      room = null;
+      isSpectator = false;
+      gameStarted = false;
+      if (roomDeletionTimer) { clearTimeout(roomDeletionTimer); roomDeletionTimer = null; }
+      initLobby();
+    };
+
+    function updateRoomUI() {
+      if (!room) return;
+      if (room.status === 'lobby') {
+        switchScreen('room-screen');
+        renderSlots();
+        document.getElementById('room-id-display').textContent = room.hostName || 'Стая';
+        const totalPlayers = Object.values(room.players).filter(p => p).length;
+        const btnStart = document.getElementById('btn-start-game');
+        if (room.hostId === myUserId && totalPlayers >= 2) {
+          btnStart.classList.remove('hidden');
+        } else {
+          btnStart.classList.add('hidden');
+        }
+      } else if (room.status === 'playing' || room.status === 'won') {
+        if (!gameStarted) {
+          gameStarted = true;
+          snapPiecesToTarget();
+          switchScreen('game-screen');
+        }
+        renderGameUI();
+
+        if (room.status === 'won' && !roomDeletionTimer) {
+          roomDeletionTimer = setTimeout(() => {
+            if (currentRoomId) {
+              const roomRef = doc(db, 'artifacts', APP_ID, 'public', 'data', 'rooms', currentRoomId);
+              deleteDoc(roomRef).catch(() => {});
+            }
+            roomDeletionTimer = null;
+          }, 10000);
+        }
+      }
+    }
+
+    function renderSlots() {
+      const container = document.getElementById('slots-container');
+      container.innerHTML = '';
+      const bgColors = { red: 'bg-red-500', blue: 'bg-blue-500', green: 'bg-green-500', yellow: 'bg-yellow-500' };
+      order.forEach(color => {
+        const p = room.players[color];
+        const isHost = room.hostId === myUserId;
+        let content = '';
+        if (p) {
+          content = `
+            <div class="flex items-center gap-3">
+              <div class="w-8 h-8 rounded-full ${bgColors[color]} shadow-lg"></div>
+              <div class="font-bold ${p.id === myUserId ? 'text-indigo-400' : 'text-white'}">
+                ${p.name} ${p.isBot ? '🤖' : ''} ${room.hostId === p.id ? '👑' : ''}
+              </div>
+            </div>
+            ${(p.id === myUserId || (isHost && p.isBot)) ?
+              `<button onclick="leaveSlot('${color}')" class="text-red-400 hover:text-red-300 font-bold text-sm">Излез</button>`
+              : ''}
+          `;
+        } else {
+          content = `
+            <div class="flex items-center gap-3">
+              <div class="w-8 h-8 rounded-full ${bgColors[color]} opacity-30"></div>
+              <div class="font-bold text-slate-500">Свободно (${colorNames[color]})</div>
+            </div>
+            <div class="flex gap-2">
+              <button onclick="takeSlot('${color}')" class="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1 rounded text-sm font-bold">Влез</button>
+              ${isHost ? `<button onclick="addBot('${color}')" class="bg-slate-700 hover:bg-slate-600 text-white px-3 py-1 rounded text-sm font-bold">Бот</button>` : ''}
+            </div>
+          `;
+        }
+        container.innerHTML += `
+          <div class="bg-slate-800 border border-slate-700 p-4 rounded-xl flex justify-between items-center shadow-md">
+            ${content}
+          </div>
+        `;
+      });
+    }
+
+    // ------------------------------------------------------------------
+    // GAME LOGIC (НЕПРОМЕНЕНА)
+    // ------------------------------------------------------------------
+    function getDistance(color, pos) {
+      if (pos === -1 || pos === 200 || pos >= 100) return 999;
+      return (pos - startPos[color] + 52) % 52;
+    }
+
+    function calculateNewPos(color, pos, dice, pieces) {
+      if (pos === -1) {
+        if (dice === 6) {
+          const startP = startPos[color];
+          if (pieces[color].includes(startP)) return -1;
+          return startP;
+        }
+        return -1;
+      }
+      if (pos >= 0 && pos <= 51) {
+        const dist = getDistance(color, pos);
+        if (dist + dice <= 50) return (pos + dice) % 52;
+        else if (dist + dice <= 56) {
+          const homeIdx = dist + dice - 51;
+          return homeIdx === 5 ? 200 : 100 + homeIdx;
+        }
+        return -1;
+      } else if (pos >= 100 && pos <= 104) {
+        const homeIdx = pos - 100;
+        if (homeIdx + dice === 5) return 200;
+        if (homeIdx + dice < 5) return 100 + homeIdx + dice;
+        return -1;
+      }
+      return -1;
+    }
+
+    function getValidMoves(color, dice, pieces) {
+      if (!dice) return [];
+      const valid = [];
+      pieces[color].forEach((pos, idx) => {
+        if (pos === 200) return;
+        const newP = calculateNewPos(color, pos, dice, pieces);
+        if (newP !== -1 && newP !== pos) valid.push(idx);
+      });
+      return valid;
+    }
+
+    function getNextTurn(currentTurn, players) {
+      let idx = order.indexOf(currentTurn);
+      for (let i = 1; i <= 4; i++) {
+        const next = order[(idx + i) % 4];
+        if (players[next]) return next;
+      }
+      return currentTurn;
+    }
+
+    async function executeMove(color, pieceIdx, dice) {
+      if (!room || room.status !== 'playing') return;
+      const pos = room.pieces[color][pieceIdx];
+      const newPos = calculateNewPos(color, pos, dice, room.pieces);
+      if (newPos === -1) return;
+      const newPieces = JSON.parse(JSON.stringify(room.pieces));
+      if (newPos >= 0 && newPos <= 51 && !safeZones.includes(newPos)) {
+        order.forEach(c => {
+          if (c !== color) {
+            newPieces[c].forEach((p, i) => {
+              if (p === newPos) newPieces[c][i] = -1;
+            });
+          }
+        });
+      }
+      newPieces[color][pieceIdx] = newPos;
+      if (newPieces[color].every(p => p === 200)) {
+        const roomRef = doc(db, 'artifacts', APP_ID, 'public', 'data', 'rooms', currentRoomId);
+        await updateDoc(roomRef, { pieces: newPieces, status: 'won', winner: color });
+        return;
+      }
+      let nextTurn = room.turn;
+      let newConsecutiveSixes = room.consecutiveSixes || 0;
+      let newRollsThisTurn = room.rollsThisTurn || 0;
+      if (dice === 6) {
+        if (newConsecutiveSixes >= 2) {
+          nextTurn = getNextTurn(room.turn, room.players);
+          newConsecutiveSixes = 0;
+          newRollsThisTurn = 0;
+        } else {
+          newConsecutiveSixes++;
+        }
+      } else {
+        nextTurn = getNextTurn(room.turn, room.players);
+        newConsecutiveSixes = 0;
+        newRollsThisTurn = 0;
+      }
+      const roomRef = doc(db, 'artifacts', APP_ID, 'public', 'data', 'rooms', currentRoomId);
+      await updateDoc(roomRef, {
+        pieces: newPieces,
+        turn: nextTurn,
+        dice: null,
+        diceRolledBy: null,
+        consecutiveSixes: newConsecutiveSixes,
+        rollsThisTurn: newRollsThisTurn,
+        lastMoveTime: Date.now()
+      });
+    }
+
+    window.rollDice = async function() {
+      if (!room || room.status !== 'playing' || room.turn !== myColor || room.dice) return;
+      if (room.players[myColor]?.isAFK) return;
+      const newDice = Math.floor(Math.random() * 6) + 1;
+      let newConsecutiveSixes = room.consecutiveSixes || 0;
+      let newRollsThisTurn = (room.rollsThisTurn || 0) + 1;
+      if (newDice === 6) newConsecutiveSixes++;
+      else newConsecutiveSixes = 0;
+      const roomRef = doc(db, 'artifacts', APP_ID, 'public', 'data', 'rooms', currentRoomId);
+      await updateDoc(roomRef, {
+        dice: newDice,
+        diceRolledBy: myColor,
+        consecutiveSixes: newConsecutiveSixes,
+        rollsThisTurn: newRollsThisTurn,
+        lastMoveTime: Date.now()
+      });
+    };
+
+    function autoPassTurn() {
+      if (!room || room.status !== 'playing') return;
+      if (room.dice === 6 && (room.consecutiveSixes || 0) < 2) {
+    const roomRef = doc(db, 'artifacts', APP_ID, 'public', 'data', 'rooms', currentRoomId);
+    updateDoc(roomRef, { dice: null, diceRolledBy: null, lastMoveTime: Date.now() });
+    return;
+  }
+      const allInBase = room.pieces[room.turn].every(p => p === -1);
+      const rolls = room.rollsThisTurn || 0;
+      if (allInBase && rolls < 3 && room.dice !== 6) {
+        const roomRef = doc(db, 'artifacts', APP_ID, 'public', 'data', 'rooms', currentRoomId);
+        updateDoc(roomRef, { dice: null, diceRolledBy: null, lastMoveTime: Date.now() });
+        return;
+      }
+      const nextTurn = getNextTurn(room.turn, room.players);
+      const roomRef = doc(db, 'artifacts', APP_ID, 'public', 'data', 'rooms', currentRoomId);
+      updateDoc(roomRef, {
+        turn: nextTurn,
+        dice: null,
+        diceRolledBy: null,
+        consecutiveSixes: 0,
+        rollsThisTurn: 0,
+        lastMoveTime: Date.now()
+      });
+    }
+
+    function runBotLogic() {
+      if (!room || room.status !== 'playing') return;
+      const currP = room.players[room.turn];
+      if (!currP || (!currP.isBot && !currP.isAFK)) return;
+      if (room.hostId !== myUserId) return;
+      const now = Date.now();
+      if (!room.dice) {
+        if (now - room.lastMoveTime > 1500) {
+          const newDice = Math.floor(Math.random() * 6) + 1;
+          let newConsecutiveSixes = room.consecutiveSixes || 0;
+          let newRollsThisTurn = (room.rollsThisTurn || 0) + 1;
+          if (newDice === 6) newConsecutiveSixes++;
+          else newConsecutiveSixes = 0;
+          const roomRef = doc(db, 'artifacts', APP_ID, 'public', 'data', 'rooms', currentRoomId);
+          updateDoc(roomRef, {
+            dice: newDice,
+            diceRolledBy: room.turn,
+            consecutiveSixes: newConsecutiveSixes,
+            rollsThisTurn: newRollsThisTurn,
+            lastMoveTime: now
+          });
+        }
+        return;
+      }
+      if (now - room.lastMoveTime > 1200) {
+        const validMoves = getValidMoves(room.turn, room.dice, room.pieces);
+        if (validMoves.length === 0) { autoPassTurn(); return; }
+        let bestIdx = -1, bestScore = -1;
+        validMoves.forEach(idx => {
+          const pos = room.pieces[room.turn][idx];
+          const newPos = calculateNewPos(room.turn, pos, room.dice, room.pieces);
+          let score = 0;
+          if (newPos >= 0 && newPos <= 51 && !safeZones.includes(newPos)) {
+            order.forEach(c => {
+              if (c !== room.turn && room.pieces[c].includes(newPos)) score += 10;
+            });
+          }
+          if (room.dice === 6 && pos === -1) score += 5;
+          if (pos >= 0) score += getDistance(room.turn, pos) / 10;
+          if (score > bestScore) { bestScore = score; bestIdx = idx; }
+        });
+        if (bestIdx === -1) bestIdx = validMoves[0];
+        executeMove(room.turn, bestIdx, room.dice);
+      }
+    }
+
+    // ------------------------------------------------------------------
+    // HEARTBEAT, AFK, HOST (без автоматично прехвърляне)
+    // ------------------------------------------------------------------
+    setInterval(() => {
+      if (!room || !currentRoomId) return;
+      const now = Date.now();
+      const roomRef = doc(db, 'artifacts', APP_ID, 'public', 'data', 'rooms', currentRoomId);
+
+      if (myColor && room.players[myColor]) {
+        updateDoc(roomRef, { [`players.${myColor}.lastActive`]: now }).catch(() => {});
+      }
+
+      let updates = {};
+      let changed = false;
+      Object.entries(room.players).forEach(([c, p]) => {
+        if (p && !p.isBot && p.connected && (now - p.lastActive > 15000)) {
+          updates[`players.${c}.connected`] = false;
+          updates[`players.${c}.isBot`] = true;
+          changed = true;
+        }
+      });
+
+      if (changed && room.hostId === myUserId) {
+        updateDoc(roomRef, updates).catch(() => {});
+      }
+
+      if (room.status === 'playing' && room.turn === myColor &&
+          room.players[myColor] && !room.players[myColor].isBot && !room.players[myColor].isAFK) {
+        if (now - room.lastMoveTime > 30000) {
+          updateDoc(roomRef, { [`players.${myColor}.isAFK`]: true });
+        } else if (room.dice) {
+          const valid = getValidMoves(myColor, room.dice, room.pieces);
+          if (valid.length === 0 && now - room.lastMoveTime > 2000) {
+            autoPassTurn();
+          }
+        }
+      }
+
+      runBotLogic();
+    }, 1000);
+
+    window.disableAFK = function() {
+      if (room && myColor && room.players[myColor]?.isAFK) {
+        const roomRef = doc(db, 'artifacts', APP_ID, 'public', 'data', 'rooms', currentRoomId);
+        updateDoc(roomRef, { [`players.${myColor}.isAFK`]: false });
+      }
+    };
+
+    // ------------------------------------------------------------------
+    // RENDER BOARD
+    // ------------------------------------------------------------------
+    function getTargetCoords(color, pieceIdx, pos, allPieces) {
+      let cell;
+      if (pos === -1) cell = bases[color][pieceIdx];
+      else if (pos >= 0 && pos <= 51) cell = ring[pos];
+      else if (pos >= 100 && pos <= 104) cell = homePaths[color][pos - 100];
+      else if (pos === 200) cell = { x: 7, y: 7 };
+      let tx = (cell.x + 0.5) * cellSize;
+      let ty = (cell.y + 0.5) * cellSize;
+      if (pos >= 0 && pos <= 51) {
+        let overlaps = [];
+        order.forEach(c => {
+          allPieces[c].forEach((p, i) => { if (p === pos) overlaps.push({ c, i }); });
+        });
+        if (overlaps.length > 1) {
+          const myIdx = overlaps.findIndex(o => o.c === color && o.i === pieceIdx);
+          const angle = (Math.PI * 2 / overlaps.length) * myIdx;
+          const r = cellSize * 0.25;
+          tx += Math.cos(angle) * r;
+          ty += Math.sin(angle) * r;
+        }
+      }
+      return { x: tx, y: ty };
+    }
+
+    function snapPiecesToTarget() {
+      if (!room || !cellSize) return;
+      order.forEach(c => {
+        room.pieces[c].forEach((pos, i) => {
+          piecesRenderState[c][i] = getTargetCoords(c, i, pos, room.pieces);
+        });
+      });
+    }
+
+    function resizeCanvas() {
+      if (!canvas) return;
+      const rect = canvas.parentElement.getBoundingClientRect();
+      if (rect.width === 0) return;
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.scale(dpr, dpr);
+      cellSize = rect.width / 15;
+      if (room) snapPiecesToTarget();
+    }
+
+    function setupResizeObserver() {
+      if (!canvas) return;
+      const parent = canvas.parentElement;
+      if (typeof ResizeObserver !== 'undefined') {
+        const observer = new ResizeObserver(() => resizeCanvas());
+        observer.observe(parent);
+        window._resizeObserver = observer;
+      }
+    }
+    window.addEventListener('resize', resizeCanvas);
+
+    function drawStar(ctx, cx, cy, spikes, outerRadius, innerRadius) {
+      let rot = Math.PI / 2 * 3;
+      let x = cx, y = cy;
+      const step = Math.PI / spikes;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy - outerRadius);
+      for (let i = 0; i < spikes; i++) {
+        x = cx + Math.cos(rot) * outerRadius;
+        y = cy + Math.sin(rot) * outerRadius;
+        ctx.lineTo(x, y);
+        rot += step;
+        x = cx + Math.cos(rot) * innerRadius;
+        y = cy + Math.sin(rot) * innerRadius;
+        ctx.lineTo(x, y);
+        rot += step;
+      }
+      ctx.lineTo(cx, cy - outerRadius);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    function drawPiece(ctx, x, y, colorStr, isTurn) {
+      ctx.beginPath();
+      ctx.arc(x, y, cellSize * 0.35, 0, Math.PI * 2);
+      ctx.fillStyle = colorStr;
+      ctx.fill();
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = 'rgba(0,0,0,0.6)';
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(x - cellSize * 0.1, y - cellSize * 0.1, cellSize * 0.1, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255,255,255,0.4)';
+      ctx.fill();
+      if (isTurn) {
+        ctx.beginPath();
+        ctx.arc(x, y, cellSize * 0.45, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([4, 4]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+    }
+
+    function renderBoard() {
+      const gameScreen = document.getElementById('game-screen');
+      if (!ctx || !room || !gameScreen.classList.contains('active')) return;
+      if (!cellSize || cellSize === 0) { resizeCanvas(); return; }
+      const cs = cellSize;
+      const w = cs * 15;
+      const h = cs * 15;
+      ctx.clearRect(0, 0, w, h);
+      ctx.strokeStyle = '#e2e8f0';
+      ctx.lineWidth = 1;
+      for (let i = 0; i <= 15; i++) {
+        ctx.beginPath(); ctx.moveTo(i * cs, 0); ctx.lineTo(i * cs, h); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(0, i * cs); ctx.lineTo(w, i * cs); ctx.stroke();
+      }
+      const drawBase = (ox, oy, c) => {
+        ctx.fillStyle = colorsHex[c];
+        ctx.fillRect(ox * cs, oy * cs, 6 * cs, 6 * cs);
+        ctx.fillStyle = '#fff';
+        ctx.fillRect((ox + 0.5) * cs, (oy + 0.5) * cs, 5 * cs, 5 * cs);
+      };
+      drawBase(0, 0, 'red');
+      drawBase(9, 0, 'blue');
+      drawBase(9, 9, 'green');
+      drawBase(0, 9, 'yellow');
+      safeZones.forEach(pos => {
+        const cell = ring[pos];
+        ctx.fillStyle = '#f1f5f9';
+        ctx.fillRect(cell.x * cs, cell.y * cs, cs, cs);
+        ctx.fillStyle = '#94a3b8';
+        drawStar(ctx, (cell.x + 0.5) * cs, (cell.y + 0.5) * cs, 5, cs * 0.3, cs * 0.15);
+      });
+      const st = { red: ring[0], blue: ring[13], green: ring[26], yellow: ring[39] };
+      Object.entries(st).forEach(([c, cell]) => {
+        ctx.fillStyle = colorsHex[c];
+        ctx.fillRect(cell.x * cs, cell.y * cs, cs, cs);
+      });
+      Object.entries(homePaths).forEach(([c, path]) => {
+        ctx.fillStyle = colorsHex[c];
+        path.forEach(cell => ctx.fillRect(cell.x * cs + cs * 0.1, cell.y * cs + cs * 0.1, cs * 0.8, cs * 0.8));
+      });
+      const cx = 7.5 * cs, cy = 7.5 * cs;
+      ctx.fillStyle = colorsHex.red;
+      ctx.beginPath(); ctx.moveTo(6 * cs, 6 * cs); ctx.lineTo(cx, cy); ctx.lineTo(6 * cs, 9 * cs); ctx.fill();
+      ctx.fillStyle = colorsHex.blue;
+      ctx.beginPath(); ctx.moveTo(6 * cs, 6 * cs); ctx.lineTo(cx, cy); ctx.lineTo(9 * cs, 6 * cs); ctx.fill();
+      ctx.fillStyle = colorsHex.green;
+      ctx.beginPath(); ctx.moveTo(9 * cs, 6 * cs); ctx.lineTo(cx, cy); ctx.lineTo(9 * cs, 9 * cs); ctx.fill();
+      ctx.fillStyle = colorsHex.yellow;
+      ctx.beginPath(); ctx.moveTo(6 * cs, 9 * cs); ctx.lineTo(cx, cy); ctx.lineTo(9 * cs, 9 * cs); ctx.fill();
+      order.forEach(c => {
+        room.pieces[c].forEach((pos, i) => {
+          const target = getTargetCoords(c, i, pos, room.pieces);
+          const p = piecesRenderState[c][i];
+          p.x += (target.x - p.x) * 0.15;
+          p.y += (target.y - p.y) * 0.15;
+          drawPiece(ctx, p.x, p.y, colorsHex[c], room.turn === c);
+        });
+      });
+      if (room.turn === myColor && room.dice && !room.players[myColor]?.isBot && !room.players[myColor]?.isAFK) {
+        const valid = getValidMoves(myColor, room.dice, room.pieces);
+        valid.forEach(idx => {
+          const p = piecesRenderState[myColor][idx];
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, cs * 0.5, 0, Math.PI * 2);
+          ctx.strokeStyle = '#fbbf24';
+          ctx.lineWidth = 3;
+          ctx.setLineDash([5, 5]);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        });
+      }
+    }
+
+    function gameLoop() {
+      requestAnimationFrame(gameLoop);
+      renderBoard();
+    }
+
+    // ------------------------------------------------------------------
+    // CANVAS CLICK
+    // ------------------------------------------------------------------
+    function handleCanvasClick(e) {
+      if (!room || room.status !== 'playing' || room.turn !== myColor || !room.dice) return;
+      if (room.players[myColor]?.isAFK) return;
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      const validMoves = getValidMoves(myColor, room.dice, room.pieces);
+      let clickedIdx = -1;
+      for (let i = 0; i < 4; i++) {
+        const p = piecesRenderState[myColor][i];
+        const dx = p.x - x, dy = p.y - y;
+        if (dx*dx + dy*dy < (cellSize * 0.6) * (cellSize * 0.6)) { clickedIdx = i; break; }
+      }
+      if (clickedIdx !== -1 && validMoves.includes(clickedIdx)) {
+        executeMove(myColor, clickedIdx, room.dice);
+      }
+    }
+
+    // ------------------------------------------------------------------
+    // CHAT
+    // ------------------------------------------------------------------
+    window.sendChat = async function(e) {
+      e.preventDefault();
+      const input = document.getElementById('chat-input');
+      const text = input.value.trim();
+      if (!text || !currentRoomId) return;
+      input.value = '';
+      const msg = { sender: myName, text, time: Date.now() };
+      const roomRef = doc(db, 'artifacts', APP_ID, 'public', 'data', 'rooms', currentRoomId);
+      await updateDoc(roomRef, { chat: arrayUnion(msg) });
+    };
+
+    // ------------------------------------------------------------------
+    // GAME UI UPDATE
+    // ------------------------------------------------------------------
+    function renderGameUI() {
+      if (!room) return;
+      const p = room.players[myColor];
+      const afkEl = document.getElementById('afk-overlay');
+      if (p && p.isAFK) {
+        afkEl.classList.remove('hidden');
+        afkEl.style.opacity = '1';
+        afkEl.style.pointerEvents = 'auto';
+      } else {
+        afkEl.classList.add('hidden');
+        afkEl.style.opacity = '0';
+        afkEl.style.pointerEvents = 'none';
+      }
+      if (room.status === 'won') {
+        const winnerEl = document.getElementById('winner-overlay');
+        winnerEl.classList.remove('hidden');
+        winnerEl.style.opacity = '1';
+        winnerEl.style.pointerEvents = 'auto';
+        const winnerName = room.players[room.winner]?.name || 'Бот';
+        document.getElementById('winner-name').textContent = winnerName + ' ПЕЧЕЛИ!';
+        document.getElementById('winner-name').style.color = colorsHex[room.winner];
+      } else {
+        const winnerEl = document.getElementById('winner-overlay');
+        winnerEl.classList.add('hidden');
+        winnerEl.style.opacity = '0';
+        winnerEl.style.pointerEvents = 'none';
+      }
+      const turnName = room.players[room.turn]?.name || '?';
+      const turnEl = document.getElementById('turn-text');
+      let infoText = room.turn === myColor ? '🎯 Твой ред е!' : `⏳ Ред на: ${turnName}`;
+      if (room.turn === myColor) {
+        const allInBase = room.pieces[myColor].every(pos => pos === -1);
+        if (allInBase) infoText += ` (Опит ${(room.rollsThisTurn || 0) + 1}/3)`;
+        else if (room.consecutiveSixes > 0) infoText += ` (🎲 Хвърли пак!)`;
+      }
+      turnEl.textContent = infoText;
+      turnEl.style.color = colorsHex[room.turn];
+      const canRoll = (room.turn === myColor && !room.dice && !p?.isBot && !p?.isAFK);
+      const btnRoll = document.getElementById('btn-roll');
+      const diceResult = document.getElementById('dice-result');
+      if (canRoll) {
+        btnRoll.classList.remove('hidden');
+        diceResult.classList.add('hidden');
+      } else {
+        btnRoll.classList.add('hidden');
+        if (room.dice) {
+          diceResult.classList.remove('hidden');
+          diceResult.textContent = room.dice;
+        } else {
+          diceResult.classList.add('hidden');
+        }
+      }
+      const list = document.getElementById('game-players-list');
+      list.innerHTML = order.map(c => {
+        const pl = room.players[c];
+        if (!pl) return '';
+        return `<div class="player-item ${room.turn === c ? 'active-turn' : ''}">
+          <div class="w-4 h-4 rounded-full" style="background:${colorsHex[c]}"></div>
+          <span class="text-sm ${pl.connected ? 'text-white' : 'text-slate-500'}">${pl.name} ${pl.isAFK ? '(AFK)' : ''}</span>
+        </div>`;
+      }).join('');
+      const chatBox = document.getElementById('chat-messages');
+      const atBottom = chatBox.scrollHeight - chatBox.scrollTop <= chatBox.clientHeight + 10;
+      chatBox.innerHTML = (room.chat || []).map(m =>
+        `<div class="mb-1 text-sm"><span class="font-bold ${m.sender === myName ? 'text-indigo-400' : 'text-slate-400'}">${m.sender}:</span> <span class="text-white">${m.text}</span></div>`
+      ).join('');
+      if (atBottom) chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    // ------------------------------------------------------------------
+    // CLEANUP
+    // ------------------------------------------------------------------
+    window.addEventListener('beforeunload', () => {
+      if (currentRoomId && myColor && room) {
+        const roomRef = doc(db, 'artifacts', APP_ID, 'public', 'data', 'rooms', currentRoomId);
+        updateDoc(roomRef, {
+          [`players.${myColor}.connected`]: false,
+          [`players.${myColor}.isBot`]: true
+        });
+        if (room.hostId === myUserId) {
+          const activePlayers = order.filter(c => room.players[c] && room.players[c].id !== myUserId && room.players[c].connected && !room.players[c].isBot);
+          if (activePlayers.length > 0) {
+            const newHostId = room.players[activePlayers[0]].id;
+            updateDoc(roomRef, { hostId: newHostId }).catch(() => {});
+          } else {
+            deleteDoc(roomRef).catch(() => {});
+          }
+        }
+      }
+    });
+
+    // ------------------------------------------------------------------
+    // START
+    // ------------------------------------------------------------------
+    document.addEventListener('DOMContentLoaded', () => {
+      canvas = document.getElementById('board');
+      ctx = canvas.getContext('2d');
+      canvas.addEventListener('click', handleCanvasClick);
+      document.getElementById('chat-form').addEventListener('submit', sendChat);
+      setupResizeObserver();
+      requestAnimationFrame(gameLoop);
+      doAuth();
+    });
+
+    // Expose to global scope
+    window.createRoom = window.createRoom;
+    window.joinRoom = window.joinRoom;
+    window.leaveRoomLocally = window.leaveRoomLocally;
+    window.startGame = window.startGame;
+    window.rollDice = window.rollDice;
+    window.disableAFK = window.disableAFK;
+    window.takeSlot = window.takeSlot;
+    window.addBot = window.addBot;
+    window.leaveSlot = window.leaveSlot;
+    window.saveName = window.saveName;
+    window.sendChat = window.sendChat;
+    window.goHome = window.goHome;
+    window.goExit = window.goExit;
+  </script>
+</head>
+<body>
+  <div id="app">
+    <!-- HEADER -->
+    <header>
+      <h1 class="text-xl md:text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-red-400 via-yellow-400 to-blue-500 tracking-tight">
+        🎲 Не се сърди човече
+      </h1>
+      <div class="flex flex-wrap items-center gap-2">
+        <button onclick="goHome()" class="bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded text-sm font-bold transition flex items-center gap-1">
+          <span>🏠</span> Начало
+        </button>
+        <button onclick="goExit()" class="bg-red-600 hover:bg-red-700 px-3 py-1 rounded text-sm font-bold transition flex items-center gap-1">
+          <span>🚪</span> Изход
+        </button>
+        <input id="input-nickname" type="text" class="bg-slate-900 border border-slate-700 rounded px-3 py-1 text-sm outline-none focus:border-indigo-500 w-28 md:w-32" placeholder="Име..." />
+        <button onclick="saveName()" class="bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded text-sm font-bold transition">Запази</button>
+      </div>
+    </header>
+
+    <!-- MAIN -->
+    <main>
+      <!-- LOBBY -->
+      <div id="lobby-screen" class="screen active">
+        <div class="w-full max-w-2xl mt-4 md:mt-8 flex flex-wrap justify-between items-center mb-6 gap-2">
+          <h2 class="text-2xl md:text-3xl font-bold">🏠 Свободни Стаи</h2>
+          <button onclick="createRoom()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 px-4 rounded-xl shadow-lg transition transform hover:-translate-y-1 text-sm md:text-base">
+            + Създай Стая
+          </button>
+        </div>
+        <ul id="rooms-list" class="w-full max-w-2xl space-y-3"></ul>
+      </div>
+
+      <!-- ROOM (pre-game) -->
+      <div id="room-screen" class="screen">
+        <div class="bg-slate-800 p-6 md:p-8 rounded-2xl shadow-2xl w-full max-w-xl border border-slate-700 mx-auto">
+          <div class="flex justify-between items-center mb-6">
+            <h2 class="text-2xl font-bold">📦 Стая: <span id="room-id-display" class="text-indigo-400"></span></h2>
+            <button onclick="leaveRoomLocally()" class="text-slate-400 hover:text-white transition">Напусни</button>
+          </div>
+          <div id="slots-container" class="space-y-3 mb-8"></div>
+          <button id="btn-start-game" onclick="startGame()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-4 rounded-xl text-xl shadow-lg transition hidden">
+            🚀 СТАРТ
+          </button>
+          <p class="text-center text-slate-500 text-sm mt-3">Минимум 2‑ма играчи (хора или ботове) за старт.</p>
+        </div>
+      </div>
+
+      <!-- GAME -->
+      <div id="game-screen" class="screen">
+        <div class="game-layout">
+          <!-- Board Area -->
+          <div class="board-area">
+            <div id="turn-text" class="text-xl md:text-3xl font-black mb-3 drop-shadow-md text-center h-8 md:h-10">...</div>
+            <div class="board-wrapper">
+              <div class="aspect-sq">
+                <canvas id="board"></canvas>
+              </div>
+            </div>
+            <div class="h-20 mt-4 flex items-center justify-center">
+              <button id="btn-roll" onclick="rollDice()" class="dice-btn hidden">🎲 Хвърли Зар</button>
+              <div id="dice-result" class="text-5xl font-black text-amber-400 bg-slate-800 border-4 border-slate-700 w-16 h-16 flex items-center justify-center rounded-2xl shadow-inner hidden">6</div>
+            </div>
+          </div>
+
+          <!-- Sidebar -->
+          <div class="sidebar">
+            <div class="bg-slate-800 rounded-xl p-3 shadow-lg flex justify-between items-center">
+              <h3 class="font-bold text-slate-300">👥 Играчи</h3>
+              <button onclick="leaveRoomLocally()" class="text-xs bg-red-500 hover:bg-red-600 px-2 py-1 rounded text-white font-bold">Изход</button>
+            </div>
+            <div id="game-players-list" class="player-list"></div>
+
+            <div class="chat-box">
+              <div id="chat-messages" class="chat-messages"></div>
+              <form id="chat-form" class="chat-input-row">
+                <input id="chat-input" type="text" placeholder="💬 Чат..." autocomplete="off" />
+                <button type="submit">➤</button>
+              </form>
+            </div>
+          </div>
+        </div>
+
+        <!-- AFK Overlay -->
+        <div id="afk-overlay" class="overlay hidden absolute inset-0 bg-black/80 z-40 flex items-center justify-center backdrop-blur-sm">
+          <div class="bg-slate-800 p-6 md:p-8 rounded-2xl text-center shadow-2xl border border-slate-700 animate-pulse max-w-md">
+            <h2 class="text-3xl md:text-4xl font-bold text-amber-400 mb-4">💤 АФК Мод</h2>
+            <p class="text-slate-300 mb-6 text-lg">Ботове играят вместо теб.</p>
+            <button onclick="disableAFK()" class="bg-indigo-600 px-6 py-3 rounded-xl text-white font-bold text-lg hover:bg-indigo-500 shadow-lg transition">
+              Върни се
+            </button>
+          </div>
+        </div>
+
+        <!-- Winner Overlay -->
+        <div id="winner-overlay" class="overlay hidden absolute inset-0 bg-black/90 z-50 flex items-center justify-center">
+          <div class="text-center p-4">
+            <h1 id="winner-name" class="text-4xl md:text-6xl font-black mb-6 drop-shadow-[0_0_15px_rgba(255,255,255,0.5)]"></h1>
+            <button onclick="leaveRoomLocally()" class="bg-white text-black px-6 py-3 rounded-xl font-bold text-xl hover:bg-slate-200 transition">
+              🏠 Към Лобито
+            </button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</body>
+</html>
