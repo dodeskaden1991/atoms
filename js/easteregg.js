@@ -14,6 +14,7 @@ const easterEggCommands = {
   "/coin": flipCoin,
   "/hack": cmdHack,
   "/html": cmdHtml,
+  "/tarot": tarotMessage,
 };
 
 const forbiddenHtmlPatterns = [
@@ -493,8 +494,9 @@ function fortuneMessage(cmd) {
   if (!cmd) cmd = "/fortune";
   const parts = cmd.trim().split(/\s+/).filter(x => x.length > 0);
 
-  if (parts.length === 1) {
+     if (parts.length === 1) {
     sendSystemLine(`[FORTUNE] ${f}`);
+    if (window.__isOraclePage) return `[FORTUNE] ${f}`;
     return "Fortune delivered.";
   }
 
@@ -639,6 +641,10 @@ function fortuneMessage(cmd) {
         date: dateStr,
         timestamp: Date.now(),
       }).catch(() => {});
+    }
+    if (window.__isOraclePage) {
+      window.__oracleLastImage = imageBase64;
+      return fullTerminalText;
     }
 
     // Проверка дали сме в модерен UI (поп-ъп терминал)

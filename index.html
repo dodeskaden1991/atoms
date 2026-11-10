@@ -78,6 +78,7 @@
           <li><button id="terminalToggleBtn" title="Отвори терминал">⌨️ Терминал</button></li>
           <li><button id="switchViewBtn" title="Към класическия интерфейс">🔄 Класически</button></li>
           <li><button id="themeToggle" title="Превключи тема">🌓 Тема</button></li>
+          <li><button id="openOraclePageBtn" title="Отвори оракула">🔮 Оракул</button></li>
         </ul>
       </section>
       <!-- СЕКЦИЯ ИГРИ – вече само един бутон за отваряне на pop-up -->
@@ -173,8 +174,26 @@
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
   <script src="js/chat.js"></script>
   <script src="js/main.js"></script>
-  <script src="js/terminal.js"></script>
   <script src="js/fortunes_data.js"></script>
+  <script src="js/tarot.js"></script>   <!-- НОВО -->
+  <script src="js/tarot_data.js"></script> 
+  <script src="js/runes.js"></script>   <!-- НОВО -->
+  <script src="js/runes_data.js"></script>
+  <script src="js/ogham.js"></script> 
+  <script src="js/ogham_data.js"></script>        <!-- НОВО -->
+  <script src="js/numerology.js"></script>
+  <script src="js/numerology_data.js"></script>
+  <script src="js/chakras_data.js"></script>
+  <script src="js/chakras.js"></script>
+  <script src="js/mantras_data.js"></script>
+  <script src="js/mantras.js"></script>
+  <script src="js/goetia_data.js"></script>
+  <script src="js/sigils.js"></script>
+  <script src="js/lenormand_data.js"></script>
+  <script src="js/lenormand.js"></script>
+  <script src="js/psychology_data.js"></script>
+  <script src="js/psychology.js"></script>
+  <script src="js/terminal.js"></script>
   <script src="js/easteregg.js"></script>
   <script src="js/ui-modern.js"></script>
 
@@ -296,6 +315,13 @@
     });
   })();
   </script>
+  <script>
+  document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('openOraclePageBtn')?.addEventListener('click', function() {
+      window.location.href = 'oracle.html';
+    });
+  });
+</script>
 
 </body>
 </html>

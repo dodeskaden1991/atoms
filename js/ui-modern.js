@@ -65,58 +65,74 @@ window.__isModernUI = true;
     let currentMode = 'main';
     let currentTarget = null;
 
-    // ========== appendMessage с филтър ==========
-    const origAppend = window.appendMessage;
-    window.appendMessage = function(text, isPrivate, isRoom) {
-      if (text.includes('[SYSTEM]') && /<font\s+color/.test(text)) {
-        const wrapper = document.createElement('div');
-        wrapper.style.display = 'block';
-        wrapper.style.padding = '2px 0';
-        wrapper.innerHTML = text;
-        messagesEl.appendChild(wrapper);
-      } else if (origAppend) {
-        origAppend(text, isPrivate, isRoom);
-      } else {
-        const wrapper = document.createElement('div');
-        wrapper.style.display = 'block';
-        wrapper.style.padding = '2px 0';
-        if (isPrivate) wrapper.className = 'privateMsg';
-        else if (isRoom) wrapper.className = 'roomMsg';
-        wrapper.textContent = text;
-        messagesEl.appendChild(wrapper);
-      }
-      messagesEl.scrollTop = messagesEl.scrollHeight;
-      applyFilter();
-    };
+    // ========== appendMessage с батчиран филтър ==========
+const origAppend = window.appendMessage;
+let filterScheduled = false;
+
+function scheduleFilter() {
+  if (filterScheduled) return;
+  filterScheduled = true;
+  requestAnimationFrame(function() {
+    filterScheduled = false;
+    applyFilter();
+  });
+}
+
+window.appendMessage = function(text, isPrivate, isRoom) {
+  if (text.includes('[SYSTEM]') && /<font\s+color/.test(text)) {
+    const wrapper = document.createElement('div');
+    wrapper.style.display = 'block';
+    wrapper.style.padding = '2px 0';
+    wrapper.innerHTML = text;
+    messagesEl.appendChild(wrapper);
+  } else if (origAppend) {
+    origAppend(text, isPrivate, isRoom);
+  } else {
+    const wrapper = document.createElement('div');
+    wrapper.style.display = 'block';
+    wrapper.style.padding = '2px 0';
+    if (isPrivate) wrapper.className = 'privateMsg';
+    else if (isRoom) wrapper.className = 'roomMsg';
+    wrapper.textContent = text;
+    messagesEl.appendChild(wrapper);
+  }
+
+  // ВАЖНО: не пипаме scrollTop тук — origAppend вече го е направил.
+  // Филтърът се батчва — веднъж на кадър, не веднъж на съобщение.
+  if (currentMode !== 'main') {
+    scheduleFilter();
+  }
+};
 
     // ========== Стриктно филтриране ==========
     function applyFilter() {
-      const children = messagesEl.children;
-      const myNick = typeof getNickname === 'function' ? getNickname() : '';
+  // Ако сме в main — не пипаме нищо, всичко се вижда по подразбиране.
+  if (currentMode === 'main') {
+    for (let child of messagesEl.children) {
+      child.style.removeProperty('display');
+    }
+    return;
+  }
 
-      for (let child of children) {
-        const isPrivate = child.classList.contains('privateMsg');
-        const isRoom = child.classList.contains('roomMsg');
-        const text = child.textContent || '';
+  const myNick = typeof getNickname === 'function' ? getNickname() : '';
+  for (let child of messagesEl.children) {
+    const isPrivate = child.classList.contains('privateMsg');
+    const isRoom = child.classList.contains('roomMsg');
+    const text = child.textContent || '';
 
-        if (currentMode === 'main') {
-          if (isPrivate) child.style.display = 'none';
-          else child.style.display = 'block';
-        } else if (currentMode === 'room') {
-          if (isRoom && text.includes('#' + currentTarget)) child.style.display = 'block';
-          else child.style.display = 'none';
-        } else if (currentMode === 'private') {
-          if (isPrivate && currentTarget) {
-            const hasTarget = text.includes('<' + currentTarget + '>') || text.includes('@' + currentTarget);
-            const hasMe = text.includes('<' + myNick + '>') || text.includes('@' + myNick);
-            if (hasTarget && (hasMe || text.includes(currentTarget))) child.style.display = 'block';
-            else child.style.display = 'none';
-          } else {
-            child.style.display = 'none';
-          }
-        }
+    let show = false;
+    if (currentMode === 'room') {
+      show = isRoom && text.includes('#' + currentTarget);
+    } else if (currentMode === 'private') {
+      if (isPrivate && currentTarget) {
+        const hasTarget = text.includes('<' + currentTarget + '>') || text.includes('@' + currentTarget);
+        const hasMe = text.includes('<' + myNick + '>') || text.includes('@' + myNick);
+        show = hasTarget && (hasMe || text.includes(currentTarget));
       }
     }
+    child.style.setProperty('display', show ? 'block' : 'none', 'important');
+  }
+}
 
     function getContacts() {
       try { return JSON.parse(localStorage.getItem('contacts') || '[]'); } catch { return []; }
@@ -314,16 +330,42 @@ window.__isModernUI = true;
     toggleSidebarBtn.textContent = '☰ Меню';
     toggleSidebarBtn.title = 'Покажи/скрий страничната лента';
     
-    toggleSidebarBtn.addEventListener('click', function() {
-      sidebarVisible = !sidebarVisible;
-      if (sidebarVisible) {
-        sidebar.classList.add('visible');
-        sidebar.classList.remove('hidden');
-      } else {
-        sidebar.classList.remove('visible');
-        sidebar.classList.add('hidden');
-      }
-    });
+   // Функция за принудително пре-композиране (изчиства "мъртви" зони)
+function forceFullRecompose() {
+  const layout = document.getElementById('appLayout');
+  if (!layout) return;
+
+  const prevDisplay = layout.style.display;
+  layout.style.display = 'none';
+  void layout.offsetHeight;               // force reflow → WebView унищожава слоевете
+  layout.style.display = prevDisplay || '';
+
+  // възстанови скрола на съобщенията
+  const msg = document.getElementById('messages');
+  if (msg) {
+    const st = msg.scrollTop;
+    void msg.offsetHeight;
+    msg.scrollTop = st;
+  }
+}
+
+toggleSidebarBtn.addEventListener('click', function() {
+  sidebarVisible = !sidebarVisible;
+
+  if (sidebarVisible) {
+    sidebar.classList.add('visible');
+    sidebar.classList.remove('hidden');
+
+    // ✅ ТУК — изчистване при отваряне
+    setTimeout(function() {
+      forceFullRecompose();
+    }, 280);  // след като 0.25s transition приключи
+
+  } else {
+    sidebar.classList.remove('visible');
+    sidebar.classList.add('hidden');
+  }
+});
 
     if (window.innerWidth > 1024) {
       sidebarVisible = true;
@@ -344,13 +386,42 @@ window.__isModernUI = true;
     });
 
     // ---------- ТЕРМИНАЛ ПОП-ЪП ----------
-    function openTerminal() {
-      terminalPopup.style.display = 'flex';
-      setTimeout(() => terminalInput.focus(), 100);
+    // Запомни състоянието на sidebar-а преди отваряне на терминала
+let sidebarWasVisibleBeforeTerminal = false;
+
+function openTerminal() {
+  // Затвори sidebar-а, ако е отворен
+  sidebarWasVisibleBeforeTerminal = sidebarVisible;
+  if (sidebarVisible) {
+    sidebarVisible = false;
+    sidebar.classList.remove('visible');
+    sidebar.classList.add('hidden');
+  }
+
+  terminalPopup.style.display = 'flex';
+  //setTimeout(() => terminalInput.focus(), 100);
+}
+
+function closeTerminal() {
+  terminalPopup.style.display = 'none';
+
+  // Върни sidebar-а, ако е бил отворен
+  if (sidebarWasVisibleBeforeTerminal) {
+    sidebarVisible = true;
+    sidebar.classList.add('visible');
+    sidebar.classList.remove('hidden');
+
+    // Форсирай repaint, за да е чисто връщането
+    if (typeof forceAtmosRepaint === 'function') {
+      setTimeout(forceAtmosRepaint, 50);
     }
-    function closeTerminal() {
-      terminalPopup.style.display = 'none';
-    }
+  }
+
+  // ✅ НОВО: принудителен popup-refresh след затваряне на терминала
+  if (typeof window.atmosScheduleFix === 'function') {
+    window.atmosScheduleFix(450);
+  }
+}
     terminalToggleBtn.addEventListener('click', openTerminal);
     terminalCloseBtn.addEventListener('click', closeTerminal);
     terminalOverlay.addEventListener('click', function(e) {

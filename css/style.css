@@ -113,12 +113,20 @@ body.light #chatWindow {
 #messages {
   flex: 1 1 auto;
   min-height: 0;
-  overflow-y: auto; /* ❗ само тук */
+  overflow-y: auto;
   white-space: pre-wrap;
   font-size: 14px;
   overflow-wrap: anywhere;
+
+  /* ✅ ФИКС: собствен непрозрачен фон */
+  background: #000;
+  color: #0f0;
 }
 
+body.light #messages {
+  background: var(--crt-bg);
+  color: var(--crt-text);
+}
 /* ===========================
    TERMINAL PANEL
 =========================== */
@@ -147,13 +155,20 @@ body.light #terminalPanel {
   min-height: 0;
   overflow-y: auto;
   white-space: pre-wrap;
-  word-break: break-word;   /* 🔥 КРИТИЧНО */
-  overflow-wrap: anywhere;  /* 🔥 КРИТИЧНО */
+  word-break: break-word;
+  overflow-wrap: anywhere;
   font-size: 14px;
   margin-bottom: 0.5em;
   -webkit-overflow-scrolling: touch;
-  tab-size: 4;              /* Заковава размера на табулациите за /help секцията */
+  tab-size: 4;
   -moz-tab-size: 4;
+
+  /* ✅ ДОБАВИ ТОВА */
+  background: #000;
+}
+
+body.light #terminalOutput {
+  background: var(--crt-bg);
 }
 
 /* ===========================
@@ -174,7 +189,7 @@ body.light #terminalPanel {
 
 #terminalInput {
   flex: 1;
-  background: transparent;
+  background: var(--matrix-bg);   /* вместо transparent */
   border: none;
   outline: none;
   color: inherit;
@@ -182,6 +197,19 @@ body.light #terminalPanel {
   font-size: inherit;
   caret-color: currentColor;
   caret-shape: block;
+}
+
+body.light #terminalInput {
+  background: var(--crt-bg);
+}
+
+/* crypto-mode override-и за input фона */
+body.dark.crypto-mode #terminalInput {
+  background: #000000;
+}
+
+body.light.crypto-mode #terminalInput {
+  background: #ffffff;
 }
 
 /* ===========================

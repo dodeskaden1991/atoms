@@ -130,6 +130,9 @@ body {
   position: relative;
   min-height: 0;
   overflow: hidden;
+
+  background: var(--bg-primary);
+  background-color: var(--bg-primary);
 }
 
 /* ---- СТРАНИЧЕН БАР ---- */
@@ -207,7 +210,11 @@ body {
   flex-direction: column;
   min-height: 0;
   background: var(--bg-primary);
+  background-color: var(--bg-primary);
   overflow: hidden;
+
+  background: var(--bg-primary);
+  background-color: var(--bg-primary);
 }
 #chatHeader {
   flex: 0 0 40px;
@@ -226,9 +233,14 @@ body {
   line-height: 1.6;
   white-space: pre-wrap;
   word-break: break-word;
+
+  background: var(--bg-primary);
+  background-color: var(--bg-primary);
+  /*-webkit-backface-visibility: hidden;
+  backface-visibility: hidden;*/
 }
 #messages > div {
-  display: block !important;
+  display: block;
   margin-bottom: 4px;
   padding: 2px 0;
   clear: both;
@@ -319,18 +331,32 @@ body.light #messages .roomMsg {
     width: 260px;
     max-width: 80%;
     z-index: 100;
-    transform: translateX(-100%);
+    background: var(--bg-secondary);
     box-shadow: 4px 0 20px rgba(0,0,0,0.6);
     border-right: 1px solid var(--border-color);
-    transition: transform 0.25s ease;
+
+    /* БЕЗ will-change */
+    /* БЕЗ backface-visibility */
+    transform: translateX(-100%);
+    visibility: hidden;
+    transition: transform 0.25s ease, visibility 0s linear 0.25s;
   }
+
   #sidebar.visible {
     display: flex !important;
-    transform: translateX(0) !important;
+    transform: none !important;
+    visibility: visible;
+    transition: transform 0.25s ease, visibility 0s linear 0s;
   }
+
   #sidebar.hidden {
+    display: flex !important;
     transform: translateX(-100%) !important;
+    visibility: hidden;
+    transition: transform 0.25s ease, visibility 0s linear 0.25s;
   }
+
+
   #mainNav { flex-wrap: nowrap; height: 48px; padding: 0 0.8em; }
   .nav-right { gap: 6px; }
   #clockDisplay { font-size: 14px; min-width: 60px; }

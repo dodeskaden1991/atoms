@@ -98,51 +98,129 @@ function runCommand(cmd) {
     return;
   }
 
-  /* ----- HELP ----- */
+     /* ----- HELP ----- */
   if (cmd === "/help") {
     response =
 `Available commands:
 
 CHAT COMMANDS
-  /chat <msg>\t\t\tSend a public message
-  /su <nick> <msg>\t\t\t\tSend a private message
-  /nickname <name>\t\tChange your nickname
+  /chat &lt;msg&gt;\t\t\tSend a public message
+  /su &lt;nick&gt; &lt;msg&gt;\t\tSend a private message
+  /nickname &lt;name&gt;\t\tChange your nickname
 
 ROOM COMMANDS
-  /room enter <name>\t\tJoin a room
-  /room leave <name>\t\tLeave a room
-  /room list\t\tList joined rooms
-  /room <name> <msg>\t\t\tSend message to a room
+  /room enter &lt;name&gt;\t\tJoin a room
+  /room leave &lt;name&gt;\t\tLeave a room
+  /room list\t\t\tList joined rooms
+  /room &lt;name&gt; &lt;msg&gt;\t\tSend message to a room
   /show all\t\t\tShow all messages (default)
-  /show main\t\tShow only main + private
-  /show private\t\tShow only private messages
-  /show <room>\t\t\tShow only a specific room + private
+  /show main\t\t\tShow only main + private
+  /show private\t\t\tShow only private messages
+  /show &lt;room&gt;\t\t\tShow only a specific room + private
 
 NAVIGATION COMMANDS (INTERACTIVE MODE)
   /cd chat\t\t\tEnter interactive public chat
-  /cd su <nick>\t\t\tEnter interactive private chat
-  /cd room <name>\t\t\tEnter interactive room chat
+  /cd su &lt;nick&gt;\t\t\tEnter interactive private chat
+  /cd room &lt;name&gt;\t\tEnter interactive room chat
   .exit\t\t\t\tExit interactive mode back to shell
 
 NOTIFICATION COMMANDS
   /mute\t\t\t\tMute main + rooms
-  /mute main\t\tMute only main messages
-  /mute rooms\t\tMute only room messages
+  /mute main\t\t\tMute only main messages
+  /mute rooms\t\t\tMute only room messages
   /unmute\t\t\tUnmute everything
 
 RADIO COMMANDS
-  /play <num>\t\t\tPlay radio station
+  /play &lt;num&gt;\t\t\tPlay radio station
   /pause\t\t\tPause radio
-  /volume <0-100>\tSet radio volume
+  /volume &lt;0-100&gt;\t\tSet radio volume
   /stations\t\t\tList available stations
   /random\t\t\tPlay random station
 
+TAROT COMMANDS
+  /tarot\t\t\tDraw a single tarot card
+  /tarot share\t\t\tGenerate single card image
+  /tarot read &lt;question&gt;\t3-card reading (Past/Present/Future)
+  /tarot read love &lt;q&gt;\t\tLove spread (You/Partner/Relationship)
+  /tarot read cross &lt;q&gt;\t\tCrossroads (You/Path A/Path B/Advice)
+  /tarot read 5 &lt;q&gt;\t\t5-card deep reading
+  /tarot read share\t\tShare the last reading as image
+
+RUNE COMMANDS
+  /runes\t\t\tDraw a single rune
+  /runes share\t\t\tGenerate single rune image
+  /runes read &lt;question&gt;\t3-rune reading (Past/Present/Future)
+  /runes read odin &lt;q&gt;\t\tOdin's Cross (5 runes)
+  /runes read hammer &lt;q&gt;\t\tThor's Hammer (Situation/Obstacle/Action)
+  /runes read cross &lt;q&gt;\t\t4-rune cross (You/Situation/Advice/Result)
+  /runes read wheel &lt;q&gt;\t\tRunic Wheel (12 runes in circle)
+  /runes read share\t\tShare the last reading as image
+
+OGHAM COMMANDS
+  /ogham\t\t\tDraw a single ogham letter
+  /ogham share\t\t\tGenerate single ogham image
+  /ogham read &lt;question&gt;\t3-tree reading (Past/Present/Future)
+  /ogham read druid &lt;q&gt;\t\tDruid's Path (Situation/Obstacle/Action)
+  /ogham read grove &lt;q&gt;\t\tSacred Grove (5 trees)
+  /ogham read cross &lt;q&gt;\t\tTree Cross (You/Situation/Advice/Result)
+  /ogham read share\t\tShare the last reading as image
+
+NUMEROLOGY COMMANDS
+  /num me &lt;name&gt; &lt;DD.MM.YYYY&gt;\tSave your profile
+  /num you &lt;name&gt; &lt;DD.MM.YYYY&gt;\tSave second profile
+  /num\t\t\t\tShow your full analysis
+  /num you\t\t\tShow second profile analysis
+  /num love\t\t\tLove compatibility
+  /num biz\t\t\tBusiness compatibility
+  /num friend\t\t\tFriendship compatibility
+  /num today\t\t\tPersonal day message
+  /num share\t\t\tGenerate result image
+  /num clear me|you\t\tDelete profile
+
+CHAKRA COMMANDS
+  /chakras\t\t\t\tList all 7 chakras
+  /chakras &lt;name&gt;\t\tInfo about a chakra
+  /chakras practice [topic]\t\tPractice or list of topics
+  /chakras today\t\t\tChakra of the day (planetary)
+  /chakras me &lt;name&gt; &lt;date&gt;\tPersonal chakra profile
+  /chakras share\t\t\tGenerate result image
+  /chakras clear\t\t\tDelete personal profile
+
+MANTRA COMMANDS
+  /mantra\t\t\t\tRandom mantra (in main chat)
+  /mantra share\t\t\tGenerate image of last mantra
+  /mantra &lt;name&gt;\t\tDetails about a mantra
+  /mantra practice\t\t\tList all practice themes
+  /mantra practice &lt;theme&gt;\tMantra for a specific theme
+  /mantra themes\t\t\tSame as /mantra practice
+
+SIGIL COMMANDS
+  /sigil &lt;intention&gt;\t\tGenerate personal sigil
+  /sigil share\t\t\tRepeat last sigil as image
+  /sigil reverse &lt;intention&gt;\tSigil for banishing
+  /sigil goetia\t\t\tRandom demon (in main chat)
+  /sigil goetia share\t\tRandom demon image
+  /sigil goetia &lt;name&gt;\t\tDetails about a demon
+
+LENORMAND COMMANDS
+  /lenormand\t\t\tRandom card (in main chat)
+  /lenormand share\t\tRandom card as image
+  /lenormand &lt;number|name&gt;\tDetails about a card (1-36)
+  /lenormand read &lt;question&gt;\t3-card reading with combination
+  /lenormand read share\t\tShare last 3-card reading as image
+  /lenormand grand [man|woman] &lt;q&gt;\tGrand Tableau (36 cards)
+  /lenormand grand share\t\tShare last Grand Tableau as image
+
+PSYCHE COMMANDS
+  /psyche &lt;text&gt;\t\tПсихологически анализ на текст
+  /psyche share\t\t\tКартинка с последния анализ
+
 TERMINAL COMMANDS
-  /theme dark\t\tSwitch to dark theme
-  /theme light\t\tSwitch to light theme
-  /swap\t\t\t\tswap between normal and crypto mod
-  /key\t\t\t\tenter the crypto key for decoding
-  /generate text\tГенерирай уникално Стори за Instagram/FB
+  /theme dark\t\t\tSwitch to dark theme
+  /theme light\t\t\tSwitch to light theme
+  /swap\t\t\t\tSwap between normal and crypto mod
+  /key\t\t\t\tEnter the crypto key for decoding
+  /generate text\t\tGenerate unique Story for Instagram/FB
   /clear\t\t\tClear terminal
   /about\t\t\tAbout Atmos
   /help\t\t\t\tShow this help`;
@@ -327,6 +405,46 @@ TERMINAL COMMANDS
   else if (cmd.startsWith("/generate")) {
     // Извикваме глобалната функция, която добавихме в main.js
     response = generateStoryMessage(cmd);
+  }
+
+    /* ----- RUNES ----- */
+  else if (cmd === "/runes" || cmd.startsWith("/runes ")) {
+    response = runesMessage(cmd);
+  }
+
+    /* ----- OGHAM ----- */
+  else if (cmd === "/ogham" || cmd.startsWith("/ogham ")) {
+    response = oghamMessage(cmd);
+  }
+
+    /* ----- MANTRAS ----- */
+  else if (cmd === "/mantra" || cmd.startsWith("/mantra ")) {
+    response = mantrasMessage(cmd);
+  }
+
+      /* ----- PSYCHE ----- */
+  else if (cmd === "/psyche" || cmd.startsWith("/psyche ")) {
+    response = psycheMessage(cmd);
+  }
+
+      /* ----- LENORMAND ----- */
+  else if (cmd === "/lenormand" || cmd.startsWith("/lenormand ")) {
+    response = lenormandMessage(cmd);
+  }
+
+    /* ----- SIGILS ----- */
+  else if (cmd === "/sigil" || cmd.startsWith("/sigil ")) {
+    response = sigilsMessage(cmd);
+  }
+  
+    /* ----- CHAKRAS ----- */
+  else if (cmd === "/chakras" || cmd.startsWith("/chakras ")) {
+    response = chakrasMessage(cmd);
+  }
+
+    /* ----- NUMEROLOGY ----- */
+  else if (cmd === "/num" || cmd.startsWith("/num ")) {
+    response = numerologyMessage(cmd);
   }
 
   /* ----- CLEAR TERMINAL ----- */

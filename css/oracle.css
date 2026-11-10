@@ -1,0 +1,232 @@
+:root {
+  --bg-primary: #0b0e11;
+  --bg-secondary: #14181c;
+  --bg-tertiary: #1e2429;
+  --text-primary: #d4d4d4;
+  --text-secondary: #a0a0a0;
+  --text-accent: #00ff88;
+  --border-color: #2a3038;
+  --font: 'Courier New', monospace;
+}
+body.light {
+  --bg-primary: #f0f2f5;
+  --bg-secondary: #e4e7ec;
+  --bg-tertiary: #d0d5dd;
+  --text-primary: #1a1a1a;
+  --text-secondary: #444;
+  --text-accent: #006644;
+  --border-color: #b0b8c0;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; }
+body {
+  display: flex; flex-direction: column;
+  font-family: var(--font); background: var(--bg-primary); color: var(--text-primary);
+}
+#oracleHeader {
+  flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between;
+  padding: 0.6em 1em; background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+}
+#oracleHeader h1 { font-size: 20px; color: var(--text-accent); font-weight: normal; }
+#homeBtn {
+  color: var(--text-accent); text-decoration: none; padding: 6px 14px;
+  border: 1px solid var(--border-color); border-radius: 6px; font-size: 14px;
+}
+#homeBtn:hover { background: var(--bg-tertiary); }
+#oracleLayout { flex: 1 1 auto; display: flex; min-height: 0; overflow: hidden; }
+#oracleSidebar {
+  flex: 0 0 280px; background: var(--bg-secondary); border-right: 1px solid var(--border-color);
+  overflow-y: auto; padding: 12px;
+}
+.profileSection { margin-bottom: 16px; }
+.profileSection h3 { font-size: 14px; color: var(--text-accent); margin-bottom: 8px; }
+.profileSection small { color: var(--text-secondary); font-size: 11px; }
+.profileSection input {
+  width: 100%; padding: 6px 10px; margin-bottom: 6px;
+  background: var(--bg-primary); border: 1px solid var(--border-color);
+  border-radius: 4px; color: var(--text-primary); font-family: var(--font); font-size: 13px;
+}
+.profileSection input:focus { outline: none; border-color: var(--text-accent); }
+.oracleListSection h3 { font-size: 14px; color: var(--text-accent); margin-bottom: 8px; }
+#oracleTabs { display: flex; flex-direction: column; gap: 4px; }
+#oracleTabs button {
+  text-align: left; padding: 8px 12px;
+  background: var(--bg-primary); border: 1px solid var(--border-color);
+  color: var(--text-primary); font-family: var(--font); font-size: 14px;
+  cursor: pointer; border-radius: 6px; transition: 0.15s;
+}
+#oracleTabs button:hover { background: var(--bg-tertiary); }
+#oracleTabs button.active {
+  background: var(--text-accent); color: var(--bg-primary); font-weight: bold;
+  border-color: var(--text-accent);
+}
+#oracleMain {
+  flex: 1 1 auto; overflow-y: auto; padding: 20px;
+  display: flex; flex-direction: column; gap: 16px;
+}
+#oracleFormWrap, #oracleResult {
+  background: var(--bg-secondary); border: 1px solid var(--border-color);
+  border-radius: 8px; padding: 16px;
+}
+#oracleForm label {
+  display: block; margin-bottom: 10px; font-size: 14px; color: var(--text-secondary);
+}
+#oracleForm select, #oracleForm input, #oracleForm textarea {
+  display: block; width: 100%; margin-top: 4px;
+  padding: 8px 12px; background: var(--bg-primary);
+  border: 1px solid var(--border-color); border-radius: 6px;
+  color: var(--text-primary); font-family: var(--font); font-size: 14px;
+}
+#oracleForm textarea { min-height: 100px; resize: vertical; }
+#oracleForm select:focus, #oracleForm input:focus, #oracleForm textarea:focus {
+  outline: none; border-color: var(--text-accent);
+}
+#oracleGenerateBtn {
+  width: 100%; padding: 12px; margin-top: 12px;
+  background: var(--text-accent); color: var(--bg-primary);
+  border: none; border-radius: 6px; font-family: var(--font);
+  font-size: 15px; font-weight: bold; cursor: pointer;
+}
+#oracleGenerateBtn:hover { opacity: 0.85; }
+#oracleGenerateBtn:disabled { opacity: 0.5; cursor: wait; }
+#oracleResultText {
+  white-space: pre-wrap; font-size: 14px; line-height: 1.6;
+  max-height: 50vh; overflow-y: auto; margin-bottom: 12px;
+}
+#oracleResultImage {
+  max-width: 100%; margin: 12px 0;
+  border: 1px solid var(--border-color); border-radius: 6px;
+  display: block;
+}
+#oracleResultActions { display: flex; gap: 10px; flex-wrap: wrap; }
+#oracleDownloadBtn, #oraclePublishBtn {
+  padding: 10px 18px; border-radius: 6px; font-family: var(--font);
+  font-size: 14px; font-weight: bold; cursor: pointer; text-decoration: none;
+}
+#oracleDownloadBtn { background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-color); }
+#oracleDownloadBtn:hover { background: var(--border-color); }
+#oraclePublishBtn { background: var(--text-accent); color: var(--bg-primary); border: none; }
+#oraclePublishBtn:hover { opacity: 0.85; }
+#oraclePublishBtn:disabled { opacity: 0.5; cursor: default; }
+
+@media (max-width: 800px) {
+  /* Layout: column вместо row */
+  #oracleLayout {
+    flex-direction: column;
+  }
+
+  /* Sidebar: компактен, отгоре, не фиксиран */
+  #oracleSidebar {
+    flex: 0 0 auto;
+    width: 100%;
+    max-height: 45vh;
+    border-right: none;
+    border-bottom: 1px solid var(--border-color);
+    padding: 10px 12px;
+    overflow-y: auto;
+  }
+
+  /* Профилите в 2 колони */
+  .profileSection {
+    margin-bottom: 10px;
+  }
+  .profileSection h3 {
+    font-size: 13px;
+    margin-bottom: 6px;
+  }
+  .profileSection input {
+    padding: 5px 8px;
+    font-size: 13px;
+    margin-bottom: 4px;
+  }
+
+  /* Оракул-табовете: хоризонтален scroll */
+  .oracleListSection h3 {
+    font-size: 13px;
+    margin-bottom: 6px;
+  }
+  #oracleTabs {
+    flex-direction: row;
+    overflow-x: auto;
+    overflow-y: hidden;
+    gap: 6px;
+    padding-bottom: 6px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+  }
+  #oracleTabs button {
+    flex: 0 0 auto;
+    padding: 8px 14px;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+  /* Скрий scrollbar-а */
+  #oracleTabs::-webkit-scrollbar { height: 4px; }
+  #oracleTabs::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 2px; }
+
+  /* Main: пълна ширина */
+  #oracleMain {
+    padding: 12px;
+    gap: 12px;
+  }
+
+  /* Формата: по-компактна */
+  #oracleFormWrap, #oracleResult {
+    padding: 12px;
+  }
+  #oracleForm label {
+    font-size: 13px;
+    margin-bottom: 8px;
+  }
+  #oracleForm select, #oracleForm input, #oracleForm textarea {
+    padding: 7px 10px;
+    font-size: 14px;
+  }
+
+  /* Резултат: по-малка картинка */
+  #oracleResultImage {
+    max-width: 100%;
+  }
+  #oracleResultText {
+    font-size: 13px;
+    max-height: 40vh;
+  }
+
+  /* Бутоните: пълна ширина, удобни за пръст */
+  #oracleGenerateBtn {
+    padding: 14px;
+    font-size: 15px;
+  }
+  #oracleResultActions {
+    flex-direction: column;
+  }
+  #oracleDownloadBtn, #oraclePublishBtn {
+    width: 100%;
+    text-align: center;
+    padding: 12px 18px;
+  }
+
+  /* Хедър: по-малък */
+  #oracleHeader {
+    padding: 0.5em 0.8em;
+  }
+  #oracleHeader h1 {
+    font-size: 16px;
+  }
+  #homeBtn {
+    padding: 5px 12px;
+    font-size: 13px;
+  }
+}
+
+/* Много малки екрани (< 380px) */
+@media (max-width: 380px) {
+  #oracleTabs button {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+  #oracleHeader h1 {
+    font-size: 14px;
+  }
+}

@@ -4,12 +4,82 @@
   <meta charset="UTF-8">
   <title>Atmos Admin</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="css/style.css">
+  <style>
+    body {
+      font-family: monospace;
+      background: #0a0a0a;
+      color: #00ff88;
+      padding: 20px;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    h1 { color: #00ff88; border-bottom: 2px solid #00ff88; padding-bottom: 8px; }
+    h2 { color: #00ff88; margin-top: 24px; font-size: 18px; }
+    button {
+      background: #00ff88;
+      color: #000;
+      border: none;
+      padding: 8px 14px;
+      margin: 4px 4px 4px 0;
+      cursor: pointer;
+      font-family: monospace;
+      font-weight: bold;
+      border-radius: 4px;
+      font-size: 13px;
+    }
+    button:hover { background: #00cc66; }
+    button.danger { background: #ff4444; color: #fff; }
+    button.danger:hover { background: #cc0000; }
+    button.warn { background: #ffaa00; color: #000; }
+    input {
+      background: #1a1a1a;
+      border: 1px solid #00ff88;
+      color: #00ff88;
+      padding: 8px 12px;
+      font-family: monospace;
+      border-radius: 4px;
+      margin: 4px 4px 4px 0;
+      font-size: 14px;
+    }
+    #adminStatus {
+      background: #1a1a1a;
+      border: 1px solid #333;
+      padding: 10px;
+      border-radius: 4px;
+      margin-top: 12px;
+      max-height: 300px;
+      overflow-y: auto;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+    #statsBox {
+      background: #111;
+      border: 1px solid #00ff88;
+      padding: 16px;
+      border-radius: 6px;
+      margin: 12px 0;
+      font-size: 14px;
+      line-height: 1.7;
+    }
+    .section {
+      border: 1px solid #333;
+      border-radius: 6px;
+      padding: 12px 16px;
+      margin: 12px 0;
+    }
+    .section h3 {
+      margin: 0 0 10px;
+      color: #00ff88;
+      font-size: 15px;
+    }
+    #loginBox { max-width: 400px; }
+    #loginStatus { color: #ff4444; margin-top: 8px; }
+  </style>
 </head>
 
 <body class="dark">
 
-  <h1>Atmos Admin Panel</h1>
+  <h1>⚙️ Atmos Admin Panel</h1>
 
   <div id="loginBox">
     <h2>Вход</h2>
@@ -20,18 +90,58 @@
   </div>
 
   <div id="adminPanel" style="display:none;">
-    <h2>Административни действия</h2>
 
-    <button onclick="deleteAll()">Изтрий ВСИЧКО</button>
-    <button onclick="deleteBeyond500()">Изтрий съобщения над 500</button>
+    <div class="section">
+      <h3>📊 Статистика</h3>
+      <div id="statsBox">Зареждане...</div>
+      <button onclick="loadStats()">🔄 Обнови</button>
+      <button id="autoRefreshBtn" onclick="toggleAutoRefresh()">▶️ Авто-refresh: ИЗКЛ</button>
+    </div>
 
-    <p id="adminStatus"></p>
+    <div class="section">
+      <h3>🗑️ Триене по филтър</h3>
+      <button onclick="deleteRoom()">Изтрий стая</button>
+      <button onclick="deleteUser()">Изтрий потребител</button>
+      <button onclick="deleteOlderThan()">Изтрий по-стари от N дни</button>
+      <button onclick="deleteOne()">Изтрий 1 съобщение (по ключ)</button>
+    </div>
+
+    <div class="section">
+  <h3>🔍 Триене по текст</h3>
+  <button onclick="previewByText()">👁 Преглед (без триене)</button>
+  <button class="danger" onclick="deleteByText()">🗑️ Триене по текст / regex</button>
+</div>
+
+   <div class="section">
+  <h3>💾 Export / Backup</h3>
+  <button onclick="exportAll()">📥 Свали всичко (JSON)</button>
+  <button onclick="exportRoom()">📥 Свали стая (JSON)</button>
+</div>
+
+<div class="section">
+  <h3>📤 Import / Restore</h3>
+  <button onclick="importAll()">📤 Качи архив (цял)</button>
+  <button onclick="importRoom()">📤 Качи в стая</button>
+  <button onclick="importEffects()">📤 Качи ефекти</button>
+</div>
+
+    <div class="section">
+      <h3>🧹 Други</h3>
+      <button onclick="clearEffects()">Изчисти ефекти</button>
+      <button onclick="clearBuffer()">Изчисти buffer</button>
+    </div>
+
+    <div class="section">
+      <h3>⚠️ Опасна зона</h3>
+      <button class="danger" onclick="deleteAll()">ИЗТРИЙ ВСИЧКО</button>
+    </div>
+
+    <div id="adminStatus"></div>
   </div>
 
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
-
   <script src="js/admin.js"></script>
 
 </body>

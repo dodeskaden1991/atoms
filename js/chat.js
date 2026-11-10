@@ -360,14 +360,16 @@ function listenForMessages() {
 
   const chatQuery = queryRef.limitToLast(100);
 
+  // 1) Snapshot за историята (зарежда веднага)
   chatQuery.once("value", (snapshot) => {
     const items = [];
     snapshot.forEach(child => {
       items.push({ key: child.key, val: child.val() });
     });
-    
-    items.sort((a, b) => a.key.localeCompare(b.key));
-    
+
+    // 2) Binary sort вместо localeCompare (стабилен на всички устройства)
+    items.sort((a, b) => a.key < b.key ? -1 : (a.key > b.key ? 1 : 0));
+
     items.forEach(item => {
       const msg = item.val;
       if (!msg) return;
@@ -376,7 +378,7 @@ function listenForMessages() {
         appendMessage(formatted.text, formatted.isPrivate, formatted.isRoom);
       }
     });
-    
+
     if (items.length > 0) {
       window._firstLoadedKey = items[0].key;
       window._lastLoadedKey = items[items.length - 1].key;
@@ -386,24 +388,29 @@ function listenForMessages() {
     if (ld) ld.style.display = 'none';
     isInitialLoading = false;
 
-    // Слушател САМО за НОВИ съобщения
-    let liveRef = db.ref("atmos_chat").orderByKey();
-    if (window._lastLoadedKey) {
-      liveRef = liveRef.startAfter(window._lastLoadedKey);
-    }
+    // 3) ЕДИНСТВЕН live listener от началото на базата
+    //    НЕ ползваме startAfter — така няма race condition
+    //    Филтрираме "старите" чрез _lastLoadedKey ръчно
+    db.ref("atmos_chat").orderByKey().on("child_added", function(snap) {
+      // Ако сме го заредили вече от snapshot — пропускаме
+      if (snap.key <= window._lastLoadedKey) return;
 
-    liveRef.on("child_added", function(snapshot) {
-      if (snapshot.key === window._lastLoadedKey) return;
-
-      const msg = snapshot.val();
+      // Проверка за филтър (room/main) — snapshot-ът вече е филтрирал,
+      // но live listener-ът слуша всичко, затова филтрираме ръчно
+      const msg = snap.val();
       if (!msg) return;
-      
-      window._lastLoadedKey = snapshot.key;
+
+      // Ръчен филтър за showMode, защото live не ползва equalTo
+      if (showMode === "room" && showRoom) {
+        if ((msg.room || "main") !== showRoom) return;
+      } else if (showMode === "main") {
+        if ((msg.room || "main") !== "main") return;
+      }
+
+      window._lastLoadedKey = snap.key;
       const formatted = processAndFormatMessage(msg);
       if (formatted) {
         appendMessage(formatted.text, formatted.isPrivate, formatted.isRoom);
-        
-        // Звуков сигнал само при входящи нови съобщения в реално време
         if (!isInitialLoading) {
           playNotifySound();
         }
@@ -452,7 +459,7 @@ function loadMoreMessages() {
         return;
       }
 
-      items.sort((a, b) => a.key.localeCompare(b.key));
+      items.sort((a, b) => a.key < b.key ? -1 : (a.key > b.key ? 1 : 0));
       window._firstLoadedKey = items[0].key;
 
       const fragment = document.createDocumentFragment();

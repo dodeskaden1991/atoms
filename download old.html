@@ -1,0 +1,3777 @@
+
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Atmos Core // Download Engine</title>
+  <style>
+    body {
+      margin: 0; background: #07090b; color: #00ff33;
+      font-family: monospace; display: flex; flex-direction: column;
+      justify-content: center; align-items: center; min-height: 100vh;
+    }
+    .loader { font-size: 18px; margin-bottom: 15px; font-weight: bold; letter-spacing: 1px; text-align: center; }
+    .status { color: #888; font-size: 14px; text-transform: uppercase; text-align: center; max-width: 90%; margin-bottom: 20px; line-height: 1.4; }
+    
+    .download-btn {
+      display: none; background: #00ff33; color: #000; 
+      padding: 12px 24px; border: none; font-weight: bold; 
+      font-family: monospace; cursor: pointer; text-transform: uppercase;
+      text-decoration: none; box-shadow: 0 0 15px rgba(0, 255, 51, 0.4);
+      margin-top: 15px; font-size: 14px;
+    }
+  </style>
+
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyAGF9BsM0_OMADMYiTIpIFQ3rlWPQIcP-M",
+      authDomain: "atoms-32b0d.firebaseapp.com",
+      databaseURL: "https://atoms-32b0d-default-rtdb.europe-west1.firebasedatabase.app",
+      projectId: "atoms-32b0d",
+      storageBucket: "atoms-32b0d.appspot.com",
+      messagingSenderId: "358321648052",
+      appId: "1:358321648052:web:2f58f230f8b1384121c2e1",
+      measurementId: "G-MFJNLQMEH2"
+    };
+
+    if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+    }
+    const db = firebase.database();
+
+    const storyStyles = [
+      { name: "CYBER_SUNSET", bgGradient: ["#f9d423", "#ff4e50", "#f857a6"], textColor: "#ffffff", accentColor: "#f857a6", subTextColor: "rgba(255, 255, 255, 0.4)", borderColor: "rgba(255, 255, 255, 0.2)", fontFamily: "sans-serif", decorations: "circle" },
+      { name: "AURORA_CHILL", bgGradient: ["#00c6ff", "#0072ff", "#130cb7"], textColor: "#ffffff", accentColor: "#00f6ff", subTextColor: "rgba(255, 255, 255, 0.5)", borderColor: "rgba(0, 246, 255, 0.25)", fontFamily: "monospace", decorations: "cross" },
+      { name: "NEO_MINT", bgGradient: ["#0ba360", "#3cba92", "#111111"], textColor: "#ffffff", accentColor: "#3cba92", subTextColor: "rgba(255, 255, 255, 0.4)", borderColor: "rgba(60, 186, 146, 0.3)", fontFamily: "sans-serif", decorations: "lines" },
+      { name: "AESTHETIC_NOIR", bgGradient: ["#2c3e50", "#000000", "#111111"], textColor: "#f5f5f7", accentColor: "#e55d87", subTextColor: "rgba(255, 255, 255, 0.3)", borderColor: "rgba(255, 255, 255, 0.1)", fontFamily: "serif", decorations: "minimal" },
+      { name: "TOXIC_MATRIX", bgGradient: ["#000000", "#051307", "#00ff33"], textColor: "#00ff33", accentColor: "#ffffff", subTextColor: "rgba(0, 255, 51, 0.3)", borderColor: "rgba(0, 255, 51, 0.4)", fontFamily: "monospace", decorations: "cross" },
+      { name: "ELECTRIC_PLUM", bgGradient: ["#61045f", "#aa076b", "#1a0018"], textColor: "#ffffff", accentColor: "#ff007f", subTextColor: "rgba(255, 255, 255, 0.35)", borderColor: "rgba(255, 0, 127, 0.25)", fontFamily: "sans-serif", decorations: "circle" },
+      { name: "VAPOR_DREAM", bgGradient: ["#74ebd5", "#9ecefa", "#acb6e5"], textColor: "#111111", accentColor: "#ff4081", subTextColor: "rgba(17, 17, 17, 0.4)", borderColor: "rgba(17, 17, 17, 0.15)", fontFamily: "sans-serif", decorations: "circle" },
+      { name: "ECLIPSE_RED", bgGradient: ["#110000", "#4a0000", "#000000"], textColor: "#ffffff", accentColor: "#ff3333", subTextColor: "rgba(255, 51, 51, 0.3)", borderColor: "rgba(255, 51, 51, 0.2)", fontFamily: "serif", decorations: "cross" },
+      { name: "ZEN_MATCHA", bgGradient: ["#a8ff78", "#78ffd6"], textColor: "#1e3d2f", accentColor: "#000000", subTextColor: "rgba(30, 61, 47, 0.5)", borderColor: "rgba(30, 61, 47, 0.2)", fontFamily: "serif", decorations: "minimal" },
+      { name: "GOLDEN_DUNES", bgGradient: ["#111a24", "#c29c53", "#1a2a3a"], textColor: "#ffffff", accentColor: "#f3e5ab", subTextColor: "rgba(243, 229, 171, 0.4)", borderColor: "rgba(194, 156, 83, 0.3)", fontFamily: "serif", decorations: "lines" },
+      { name: "NEBULA_CORE", bgGradient: ["#4e54c8", "#8f94fb", "#000000"], textColor: "#ffffff", accentColor: "#8f94fb", subTextColor: "rgba(255, 255, 255, 0.4)", borderColor: "rgba(143, 148, 251, 0.3)", fontFamily: "monospace", decorations: "cross" },
+      { name: "CORAL_REEF", bgGradient: ["#ff9966", "#ff5e62"], textColor: "#ffffff", accentColor: "#ffffff", subTextColor: "rgba(255, 255, 255, 0.5)", borderColor: "rgba(255, 255, 255, 0.25)", fontFamily: "sans-serif", decorations: "circle" },
+      { name: "TOKYO_NOIR", bgGradient: ["#0f2027", "#203a43", "#2c5364"], textColor: "#00ffcc", accentColor: "#ff007f", subTextColor: "rgba(255, 255, 255, 0.4)", borderColor: "rgba(0, 255, 204, 0.2)", fontFamily: "monospace", decorations: "lines" },
+      { name: "ICE_BREAKER", bgGradient: ["#e0eafc", "#cfdef3"], textColor: "#2c3e50", accentColor: "#0072ff", subTextColor: "rgba(44, 62, 80, 0.5)", borderColor: "rgba(44, 62, 80, 0.15)", fontFamily: "sans-serif", decorations: "minimal" },
+      { name: "AMBER_ALERT", bgGradient: ["#ff4e50", "#f9d423", "#111111"], textColor: "#ffffff", accentColor: "#ff4e50", subTextColor: "rgba(255, 255, 255, 0.35)", borderColor: "rgba(255, 78, 80, 0.25)", fontFamily: "monospace", decorations: "cross" },
+      { name: "SOFT_CREAM", bgGradient: ["#f7f5f0", "#eaddca"], textColor: "#333333", accentColor: "#8b5a2b", subTextColor: "rgba(51, 51, 51, 0.4)", borderColor: "rgba(139, 90, 43, 0.2)", fontFamily: "serif", decorations: "minimal" }
+    ];
+
+    function updateStatus(msg, isError = false) {
+      const el = document.getElementById('status');
+      if (isError) {
+        el.innerHTML = `<span style="color: #ff3333;">[CRITICAL ERROR] ${msg}</span>`;
+      } else {
+        el.innerText = `[SYSTEM] ${msg}`;
+      }
+    }
+
+    async function startProcess() {
+      try {
+        updateStatus("Свързване с централната база данни...");
+        
+        const dataRef = db.ref('fortune_buffer');
+        const snapshot = await dataRef.once('value');
+        
+        if (!snapshot.exists()) {
+          updateStatus("Буферът е празен. Генерирайте съдържание от конзолата.", true);
+          return;
+        }
+
+        const data = snapshot.val();
+        let imageBase64 = "";
+        let fileNamePrefix = "atmos_fortune";
+
+        if (data.type === 'psyche') {
+  updateStatus("Засичане на Psyche пакет. Рендиране...");
+  imageBase64 = await generatePsycheCanvasCard(data);
+  fileNamePrefix = "atmos_psyche";
+} else if (data.type === 'lenormand_single') {
+  updateStatus("Засичане на Lenormand Single. Рендиране...");
+  imageBase64 = await generateLenormandSingleCanvasCard(data);
+  fileNamePrefix = "atmos_lenormand_single";
+} else if (data.type === 'lenormand_read') {
+  updateStatus("Засичане на Lenormand Reading. Рендиране...");
+  imageBase64 = await generateLenormandReadCanvasCard(data);
+  fileNamePrefix = "atmos_lenormand_read";
+} else if (data.type === 'lenormand_grand') {
+  updateStatus("Засичане на Lenormand Grand Tableau. Рендиране...");
+  imageBase64 = await generateLenormandGrandCanvasCard(data);
+  fileNamePrefix = "atmos_lenormand_grand";
+} else if (data.type === 'sigil') {
+  updateStatus("Засичане на Sigil пакет. Рендиране...");
+  imageBase64 = await generateSigilCanvasCard(data);
+  fileNamePrefix = "atmos_sigil";
+} else if (data.type === 'goetia') {
+  updateStatus("Засичане на Goetia пакет. Рендиране...");
+  imageBase64 = await generateGoetiaCanvasCard(data);
+  fileNamePrefix = "atmos_goetia";
+} else if (data.type === 'mantra') {
+  updateStatus("Засичане на Mantra пакет. Рендиране...");
+  imageBase64 = await generateMantraCanvasCard(data);
+  fileNamePrefix = "atmos_mantra";
+} else if (typeof data.type === 'string' && data.type.startsWith('chakra_')) {
+  updateStatus("Засичане на Chakra пакет. Рендиране...");
+  imageBase64 = await generateChakraCanvasCard(data);
+  fileNamePrefix = "atmos_chakra";
+} else if (typeof data.type === 'string' && data.type.startsWith('numerology_')) {
+  updateStatus("Засичане на Numerology пакет. Рендиране...");
+  imageBase64 = await generateNumerologyCanvasCard(data);
+  fileNamePrefix = "atmos_numerology";
+} else if (data.type === 'ogham_reading') {
+  updateStatus("Засичане на Ogham Reading пакет. Рендиране на разклада...");
+  imageBase64 = await generateOghamReadingCanvasCard(data);
+  fileNamePrefix = "atmos_ogham_reading";
+} else if (data.type === 'ogham') {
+  updateStatus("Засичане на Ogham пакет. Извличане на буква и рендиране...");
+  imageBase64 = await generateOghamCanvasCard(data);
+  fileNamePrefix = "atmos_ogham";
+} else if (data.type === 'runes_reading') {
+  updateStatus("Засичане на Runes Reading пакет. Рендиране на разклада...");
+  imageBase64 = await generateRunesReadingCanvasCard(data);
+  fileNamePrefix = "atmos_runes_reading";
+} else if (data.type === 'rune') {
+  updateStatus("Засичане на Rune пакет. Извличане на руна и рендиране...");
+  imageBase64 = await generateRuneCanvasCard(data);
+  fileNamePrefix = "atmos_rune";
+} else if (data.type === 'tarot_reading') {
+  updateStatus("Засичане на Tarot Reading пакет. Рендиране на разклада...");
+  imageBase64 = await generateTarotReadingCanvasCard(data);
+  fileNamePrefix = "atmos_tarot_reading";
+} else if (data.type === 'tarot') {
+  updateStatus("Засичане на Tarot пакет. Извличане на карта и рендиране...");
+  imageBase64 = await generateTarotCanvasCard(data);
+  fileNamePrefix = "atmos_tarot";
+} else if (data.isStory === true) {
+  updateStatus(`Засичане на Story пакет. Извличане на дизайн тема...`);
+  const styleIdx = data.styleMode !== undefined ? data.styleMode : 0;
+  
+  imageBase64 = generateStoryCanvasCard(data.text, styleIdx, data.date || "");
+  fileNamePrefix = "atmos_story";
+} else {
+  updateStatus("Засичане на стандартно късметче. Синхронизиране на локация и рендериране...");
+  imageBase64 = generateStandardCanvasCard(data.text, data.location);
+}
+
+        updateStatus("Генерирането завърши. Иницииране на изтегляне...");
+        
+        const fileName = `${fileNamePrefix}_${data.date || 'share'}.png`;
+
+        const fallbackBtn = document.getElementById('fallbackBtn');
+        fallbackBtn.href = imageBase64;
+        fallbackBtn.download = fileName;
+        fallbackBtn.style.display = "inline-block";
+
+        const link = document.createElement('a');
+        link.href = imageBase64;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        updateStatus("Файлът е изпратен към браузъра. Ако не стартира, натисни бутона по-долу.");
+
+        setTimeout(() => {
+          document.getElementById('status').innerHTML = "<span style='color:#fff;'>[INFO] Готово! Ако файлът се е свалил, можеш да затвориш този таб.</span>";
+        }, 3000);
+
+      } catch (error) {
+        console.error(error);
+        updateStatus("Грешка при прехвърляне на данни.", true);
+      }
+    }
+
+    // РЕНДЕР 1: МОДЕРЕН ВЕРТИКАЛЕН СТОРИ СТИЛ (1080x1920)
+    function generateStoryCanvasCard(textToDraw, styleIdx, dateStr) {
+      const activeStyle = storyStyles[styleIdx] || storyStyles[0];
+      
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      canvas.width = 1080; canvas.height = 1920;
+
+      const bgGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      bgGrad.addColorStop(0, activeStyle.bgGradient[0]);
+      bgGrad.addColorStop(0.5, activeStyle.bgGradient[1]);
+      if (activeStyle.bgGradient[2]) {
+        bgGrad.addColorStop(1, activeStyle.bgGradient[2]);
+      } else {
+        bgGrad.addColorStop(1, activeStyle.bgGradient[1]);
+      }
+      ctx.fillStyle = bgGrad;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.fillStyle = "rgba(255, 255, 255, 0.015)";
+      for (let i = 0; i < 80000; i++) {
+        const rx = Math.random() * canvas.width;
+        const ry = Math.random() * canvas.height;
+        ctx.fillRect(rx, ry, 2, 2);
+      }
+
+      if (activeStyle.decorations === "circle") {
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.1)"; ctx.lineWidth = 4;
+        ctx.beginPath(); ctx.arc(canvas.width / 2, canvas.height / 2, 400, 0, Math.PI * 2); ctx.stroke();
+      } else if (activeStyle.decorations === "cross") {
+        ctx.strokeStyle = activeStyle.accentColor; ctx.lineWidth = 2;
+        const offset = 100;
+        ctx.beginPath(); ctx.moveTo(offset, offset); ctx.lineTo(offset + 20, offset); ctx.moveTo(offset, offset); ctx.lineTo(offset, offset + 20);
+        ctx.moveTo(canvas.width - offset, offset); ctx.lineTo(canvas.width - offset - 20, offset); ctx.moveTo(canvas.width - offset, offset); ctx.lineTo(canvas.width - offset, offset + 20);
+        ctx.stroke();
+      } else if (activeStyle.decorations === "lines") {
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.05)"; ctx.lineWidth = 1;
+        for (let l = 200; l < canvas.width; l += 200) {
+          ctx.beginPath(); ctx.moveTo(l, 0); ctx.lineTo(l, canvas.height); ctx.stroke();
+        }
+      }
+
+      ctx.fillStyle = "rgba(0, 0, 0, 0.25)";
+      ctx.strokeStyle = activeStyle.borderColor;
+      ctx.lineWidth = 2;
+      const boxX = 100; const boxY = 450; const boxW = canvas.width - 200; const boxH = 950;
+      ctx.fillRect(boxX, boxY, boxW, boxH);
+      ctx.strokeRect(boxX, boxY, boxW, boxH);
+
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+
+      ctx.fillStyle = activeStyle.textColor;
+      ctx.font = `bold 32px ${activeStyle.fontFamily}`;
+      ctx.fillText("▲ ATMOS ENGINE // DISCOVERED", canvas.width / 2, 250);
+
+      ctx.fillStyle = activeStyle.subTextColor;
+      ctx.font = `18px monospace`;
+      ctx.fillText(`GEN_ID: ST_${Date.now().toString().substring(6)} // THEME: ${activeStyle.name}`, canvas.width / 2, 290);
+
+      ctx.fillStyle = activeStyle.accentColor;
+      ctx.font = `bold 120px ${activeStyle.fontFamily}`;
+      ctx.fillText("“", canvas.width / 2, 380);
+
+      ctx.fillStyle = activeStyle.textColor;
+      ctx.font = `bold 52px ${activeStyle.fontFamily}`;
+      
+      const words = textToDraw.split(' ');
+      const lines = [];
+      let currentLine = '';
+      const maxTextWidth = boxW - 140;
+
+      for (let n = 0; n < words.length; n++) {
+        let testLine = currentLine + words[n] + ' ';
+        if (ctx.measureText(testLine).width > maxTextWidth && n > 0) {
+          lines.push(currentLine.trim());
+          currentLine = words[n] + ' ';
+        } else {
+          currentLine = testLine;
+        }
+      }
+      lines.push(currentLine.trim());
+
+      const lineHeight = 75;
+      const totalTextHeight = lines.length * lineHeight;
+      let startY = (boxY + (boxH / 2)) - (totalTextHeight / 2) + (lineHeight / 2);
+
+      for (let i = 0; i < lines.length; i++) {
+        ctx.fillText(lines[i], canvas.width / 2, startY + (i * lineHeight));
+      }
+
+      ctx.textBaseline = "alphabetic";
+
+      ctx.fillStyle = activeStyle.subTextColor;
+      ctx.font = `24px monospace`;
+      ctx.fillText(`DATE: ${dateStr || 'ACTIVE'}`, canvas.width / 2, boxY + boxH - 120);
+
+      ctx.fillStyle = activeStyle.accentColor;
+      ctx.font = `bold 28px ${activeStyle.fontFamily}`;
+      ctx.fillText("atoms.free.bg", canvas.width / 2, boxY + boxH - 60);
+
+      ctx.fillStyle = "rgba(255, 255, 255, 0.3)";
+      ctx.font = "20px monospace";
+      ctx.fillText("SHARE TO STORIES // PERSISTENCE ACTIVE", canvas.width / 2, canvas.height - 180);
+
+      return canvas.toDataURL("image/png");
+    }
+
+    // РЕНДЕР 2: КВАДРАТЕН КИБЕР СТИЛ (1080x1080)
+    function generateStandardCanvasCard(textToDraw, storedLocation) {
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      canvas.width = 1080; canvas.height = 1080;
+
+      const bgGradient = ctx.createRadialGradient(540, 540, 100, 540, 540, 800);
+      bgGradient.addColorStop(0, "#0c1013"); bgGradient.addColorStop(1, "#040507");
+      ctx.fillStyle = bgGradient; ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.strokeStyle = "rgba(0, 255, 51, 0.015)"; ctx.lineWidth = 1;
+      for (let i = 0; i < canvas.height; i += 4) {
+        ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(canvas.width, i); ctx.stroke();
+      }
+
+      ctx.strokeStyle = "#00ff33"; ctx.lineWidth = 6; const pad = 35; const len = 50;
+      ctx.beginPath(); ctx.moveTo(pad + len, pad); ctx.lineTo(pad, pad); ctx.lineTo(pad, pad + len); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(canvas.width - pad - len, pad); ctx.lineTo(canvas.width - pad, pad); ctx.lineTo(canvas.width - pad, pad + len); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(pad + len, canvas.height - pad); ctx.lineTo(pad, canvas.height - pad); ctx.lineTo(pad, canvas.height - pad - len); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(canvas.width - pad - len, canvas.height - pad); ctx.lineTo(canvas.width - pad, canvas.height - pad); ctx.lineTo(canvas.width - pad, canvas.height - pad - len); ctx.stroke();
+
+      ctx.strokeStyle = "rgba(0, 255, 51, 0.15)"; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(55, 95); ctx.lineTo(canvas.width - 55, 95); ctx.stroke();
+
+      ctx.fillStyle = "rgba(0, 255, 51, 0.6)"; ctx.font = "bold 24px monospace";
+      ctx.textAlign = "left";
+      ctx.fillText("▲ ATMOS TERMINAL // SYSTEM_ACTIVE", 75, 75);
+      
+      ctx.fillStyle = "rgba(0, 255, 51, 0.4)"; ctx.font = "bold 22px monospace";
+      ctx.fillText("× ×", canvas.width - 120, 75);
+
+      ctx.font = "bold 42px monospace";
+      const words = textToDraw.split(' '); const lines = []; let currentLine = '';
+      for (let n = 0; n < words.length; n++) {
+        let testLine = currentLine + words[n] + ' ';
+        if (ctx.measureText(testLine).width > (canvas.width - 180) && n > 0) {
+          lines.push(currentLine.trim()); currentLine = words[n] + ' ';
+        } else { currentLine = testLine; }
+      }
+      lines.push(currentLine.trim());
+
+      const totalHeight = lines.length * 65;
+      let startY = (canvas.height / 2) - (totalHeight / 2) + 20;
+
+      ctx.fillStyle = "#00ff44";
+      for (let i = 0; i < lines.length; i++) {
+        ctx.fillText(lines[i], 90, startY + (i * 65));
+      }
+
+      ctx.strokeStyle = "rgba(0, 255, 51, 0.15)"; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(55, canvas.height - 115); ctx.lineTo(canvas.width - 55, canvas.height - 115); ctx.stroke();
+
+      let dynamicLocation = storedLocation;
+      if (!dynamicLocation) {
+        const fakeLocations = ["TERMINAL CORE", "LOCAL STORAGE", "ERROR 404", "SYSTEM32 ROOT", "127.0.0.1", "NULL POINTER", "UNKNOWN NODE", "PROXY LOOPBACK", "DEEP WEB ANON", "KERNEL PANIC", "ROOT DIRECTORY"];
+        dynamicLocation = fakeLocations[Math.floor(Math.random() * fakeLocations.length)];
+      }
+
+      ctx.fillStyle = "rgba(255, 255, 255, 0.25)"; ctx.font = "18px monospace";
+      ctx.fillText(`▶ NODE: ATOMS.FREE.BG // LOCATION: ${dynamicLocation}`, 75, canvas.height - 85);
+      ctx.fillText("SECURITY: ENCRYPTED_STATUS_OK", 75, canvas.height - 60);
+
+      ctx.fillStyle = "rgba(0, 255, 51, 0.15)";
+      ctx.fillRect(canvas.width - 230, canvas.height - 88, 150, 20);
+      ctx.fillStyle = "#00ff33";
+      ctx.fillRect(canvas.width - 230, canvas.height - 88, 100, 20);
+
+      return canvas.toDataURL("image/png");
+    }
+
+
+        // РЕНДЕР 5: ATMOS RUNE (single, 1080x1920)
+    function runesWrapTextLocal(ctx, text, maxWidth, maxLines) {
+      const words = (text || "").split(" ");
+      const lines = [];
+      let cur = "";
+      for (let i = 0; i < words.length; i++) {
+        const test = cur + words[i] + " ";
+        if (ctx.measureText(test).width > maxWidth && i > 0) {
+          lines.push(cur.trim());
+          cur = words[i] + " ";
+          if (maxLines && lines.length >= maxLines) {
+            if (cur.trim()) lines[lines.length - 1] += "...";
+            return lines;
+          }
+        } else {
+          cur = test;
+        }
+      }
+      if (cur.trim()) lines.push(cur.trim());
+      return lines;
+    }
+
+    function runesGetLayoutLocal(count) {
+      const usable = 1080 - 200;
+      let gap, cardW;
+      if (count <= 3) { gap = 30; }
+      else if (count === 4) { gap = 22; }
+      else { gap = 16; }
+
+      cardW = Math.floor((usable - gap * (count - 1)) / count);
+      if (count <= 3) cardW = Math.min(cardW, 260);
+
+      const cardH = Math.floor(cardW * 1.5);
+      const totalW = count * cardW + (count - 1) * gap;
+      const startX = (1080 - totalW) / 2;
+      return { cardW, cardH, gap, startX, cardY: 500 };
+    }
+
+    async function generateRuneCanvasCard(data) {
+      const S = {
+        bgTop: "#071018", bgMid: "#0d1b2a", bgBot: "#030608",
+        accent: "#8ecae6", accentSoft: "rgba(142, 202, 230, 0.35)",
+        accentDeep: "#64ffda", textPrimary: "#e0f4ff",
+        textMuted: "rgba(224, 244, 255, 0.55)",
+        fontHead: "serif", fontMono: "monospace"
+      };
+
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      canvas.width = 1080; canvas.height = 1920;
+
+      const bgGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      bgGrad.addColorStop(0, S.bgTop);
+      bgGrad.addColorStop(0.5, S.bgMid);
+      bgGrad.addColorStop(1, S.bgBot);
+      ctx.fillStyle = bgGrad; ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.fillStyle = "rgba(200, 230, 255, 0.10)";
+      for (let i = 0; i < 400; i++) {
+        ctx.fillRect(Math.random() * canvas.width, Math.random() * canvas.height, 1, 1);
+      }
+
+      ctx.strokeStyle = S.accentSoft; ctx.lineWidth = 2;
+      ctx.strokeRect(40, 40, canvas.width - 80, canvas.height - 80);
+      ctx.strokeStyle = S.accent; ctx.lineWidth = 1;
+      ctx.strokeRect(55, 55, canvas.width - 110, canvas.height - 110);
+
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+
+      ctx.fillStyle = S.accentDeep; ctx.font = `bold 36px serif`;
+      ctx.fillText("ᚠ", 95, 95); ctx.fillText("ᛟ", canvas.width - 95, 95);
+      ctx.fillText("ᚦ", 95, canvas.height - 95); ctx.fillText("ᛞ", canvas.width - 95, canvas.height - 95);
+
+      ctx.fillStyle = S.accent; ctx.font = `bold 42px ${S.fontHead}`;
+      ctx.fillText("✦ ATMOS RUNE ✦", canvas.width / 2, 140);
+
+      ctx.fillStyle = S.textMuted; ctx.font = `20px ${S.fontMono}`;
+      ctx.fillText(`RUNE OF THE DAY // ${data.date || ''}`, canvas.width / 2, 190);
+
+      const posText = data.noReversed ? "⚏ ПРАВА (не се обръща)" : (data.isReversed ? "⚏ ОБЪРНАТА" : "⚏ ПРАВА");
+      ctx.fillStyle = data.isReversed ? "#ff8888" : S.accent;
+      ctx.font = `bold 24px ${S.fontMono}`;
+      ctx.fillText(posText, canvas.width / 2, 245);
+
+      const cardX = 240, cardY = 320;
+      const cardW = canvas.width - 480, cardH = 1060;
+      const cardCX = cardX + cardW / 2, cardCY = cardY + cardH / 2;
+
+      let drawn = false;
+      if (data.imageUrl) {
+        try {
+          const img = await new Promise((resolve, reject) => {
+            const ii = new Image();
+            ii.crossOrigin = "anonymous";
+            ii.onload = () => resolve(ii);
+            ii.onerror = () => reject(new Error("load-failed"));
+            ii.src = data.imageUrl;
+          });
+
+          ctx.fillStyle = "rgba(0,0,0,0.35)";
+          ctx.fillRect(cardX - 8, cardY - 8, cardW + 16, cardH + 16);
+          ctx.strokeStyle = S.accent; ctx.lineWidth = 3;
+          ctx.strokeRect(cardX - 8, cardY - 8, cardW + 16, cardH + 16);
+
+          const imgRatio = img.width / img.height;
+          const boxRatio = cardW / cardH;
+          let dw, dh;
+          if (imgRatio > boxRatio) { dw = cardW; dh = cardW / imgRatio; }
+          else { dh = cardH; dw = cardH * imgRatio; }
+          const dx = cardX + (cardW - dw) / 2;
+          const dy = cardY + (cardH - dh) / 2;
+
+          if (data.isReversed) {
+            ctx.save();
+            ctx.translate(dx + dw / 2, dy + dh / 2);
+            ctx.rotate(Math.PI);
+            ctx.drawImage(img, -dw / 2, -dh / 2, dw, dh);
+            ctx.restore();
+          } else {
+            ctx.drawImage(img, dx, dy, dw, dh);
+          }
+          drawn = true;
+        } catch (e) {}
+      }
+
+      if (!drawn) {
+        ctx.fillStyle = "rgba(0,0,0,0.4)";
+        ctx.fillRect(cardX, cardY, cardW, cardH);
+        ctx.strokeStyle = S.accent; ctx.lineWidth = 2;
+        ctx.strokeRect(cardX, cardY, cardW, cardH);
+        ctx.fillStyle = S.accent;
+        ctx.font = `bold 380px serif`;
+        ctx.fillText(data.symbol || "ᚠ", cardCX, cardCY);
+      }
+
+      const nameY = cardY + cardH + 80;
+      ctx.fillStyle = S.textPrimary;
+      ctx.font = `bold 62px ${S.fontHead}`;
+      ctx.fillText(`${data.symbol || ""}  ${data.runeName || "Rune"}`, canvas.width / 2, nameY);
+
+      const kws = data.keywords || [];
+      const kwY = nameY + 80;
+      ctx.fillStyle = S.accent;
+      ctx.font = `bold 22px ${S.fontMono}`;
+      ctx.fillText(kws.join("  •  ").toUpperCase(), canvas.width / 2, kwY);
+
+      ctx.fillStyle = S.textPrimary;
+      ctx.font = `28px ${S.fontHead}`;
+      const mLines = runesWrapTextLocal(ctx, data.meaning || "", canvas.width - 200, 4);
+      mLines.forEach((line, i) => {
+        ctx.fillText(line, canvas.width / 2, kwY + 70 + i * 42);
+      });
+
+      ctx.fillStyle = S.accentSoft;
+      ctx.fillRect(120, canvas.height - 130, canvas.width - 240, 1);
+
+      ctx.fillStyle = S.textMuted;
+      ctx.font = `18px ${S.fontMono}`;
+      ctx.fillText("ATMOS RUNES ENGINE // ELDER FUTHARK", canvas.width / 2, canvas.height - 90);
+
+      ctx.fillStyle = S.accent;
+      ctx.font = `bold 22px ${S.fontHead}`;
+      ctx.fillText("atoms.free.bg", canvas.width / 2, canvas.height - 55);
+
+      return canvas.toDataURL("image/png");
+    }
+
+        // РЕНДЕР 7: ATMOS OGHAM (single, 1080x1920)
+    function oghamWrapTextLocal(ctx, text, maxWidth, maxLines) {
+      const words = (text || "").split(" ");
+      const lines = [];
+      let cur = "";
+      for (let i = 0; i < words.length; i++) {
+        const test = cur + words[i] + " ";
+        if (ctx.measureText(test).width > maxWidth && i > 0) {
+          lines.push(cur.trim());
+          cur = words[i] + " ";
+          if (maxLines && lines.length >= maxLines) {
+            if (cur.trim()) lines[lines.length - 1] += "...";
+            return lines;
+          }
+        } else {
+          cur = test;
+        }
+      }
+      if (cur.trim()) lines.push(cur.trim());
+      return lines;
+    }
+
+    function oghamGetLayoutLocal(count) {
+      const usable = 1080 - 200;
+      let gap, cardW;
+      if (count <= 3) { gap = 30; }
+      else if (count === 4) { gap = 22; }
+      else { gap = 16; }
+
+      cardW = Math.floor((usable - gap * (count - 1)) / count);
+      if (count <= 3) cardW = Math.min(cardW, 260);
+
+      const cardH = Math.floor(cardW * 1.5);
+      const totalW = count * cardW + (count - 1) * gap;
+      const startX = (1080 - totalW) / 2;
+      return { cardW, cardH, gap, startX, cardY: 500 };
+    }
+
+    async function generateOghamCanvasCard(data) {
+      const S = {
+        bgTop: "#0a1410", bgMid: "#14261c", bgBot: "#050a07",
+        accent: "#88c999", accentSoft: "rgba(136, 201, 153, 0.35)",
+        accentDeep: "#d4af37", textPrimary: "#e8f5e9",
+        textMuted: "rgba(232, 245, 233, 0.55)",
+        fontHead: "serif", fontMono: "monospace"
+      };
+
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      canvas.width = 1080; canvas.height = 1920;
+
+      const bgGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      bgGrad.addColorStop(0, S.bgTop);
+      bgGrad.addColorStop(0.5, S.bgMid);
+      bgGrad.addColorStop(1, S.bgBot);
+      ctx.fillStyle = bgGrad; ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.fillStyle = "rgba(200, 240, 210, 0.10)";
+      for (let i = 0; i < 400; i++) {
+        ctx.fillRect(Math.random() * canvas.width, Math.random() * canvas.height, 1, 1);
+      }
+
+      ctx.strokeStyle = S.accentSoft; ctx.lineWidth = 2;
+      ctx.strokeRect(40, 40, canvas.width - 80, canvas.height - 80);
+      ctx.strokeStyle = S.accent; ctx.lineWidth = 1;
+      ctx.strokeRect(55, 55, canvas.width - 110, canvas.height - 110);
+
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+
+      ctx.fillStyle = S.accentDeep; ctx.font = `bold 36px serif`;
+      ctx.fillText("ᚁ", 95, 95); ctx.fillText("ᚔ", canvas.width - 95, 95);
+      ctx.fillText("ᚂ", 95, canvas.height - 95); ctx.fillText("ᚓ", canvas.width - 95, canvas.height - 95);
+
+      ctx.fillStyle = S.accent; ctx.font = `bold 42px ${S.fontHead}`;
+      ctx.fillText("✦ ATMOS OGHAM ✦", canvas.width / 2, 140);
+
+      ctx.fillStyle = S.textMuted; ctx.font = `20px ${S.fontMono}`;
+      ctx.fillText(`TREE OF THE DAY // ${data.date || ''}`, canvas.width / 2, 190);
+
+      const posText = data.isReversed ? "⚏ ОБЪРНАТА" : "⚏ ПРАВА";
+      ctx.fillStyle = data.isReversed ? "#ff8888" : S.accent;
+      ctx.font = `bold 24px ${S.fontMono}`;
+      ctx.fillText(posText, canvas.width / 2, 245);
+
+      const cardX = 240, cardY = 320;
+      const cardW = canvas.width - 480, cardH = 1060;
+      const cardCX = cardX + cardW / 2, cardCY = cardY + cardH / 2;
+
+      let drawn = false;
+      if (data.imageUrl) {
+        try {
+          const img = await new Promise((resolve, reject) => {
+            const ii = new Image();
+            ii.crossOrigin = "anonymous";
+            ii.onload = () => resolve(ii);
+            ii.onerror = () => reject(new Error("load-failed"));
+            ii.src = data.imageUrl;
+          });
+
+          ctx.fillStyle = "rgba(0,0,0,0.35)";
+          ctx.fillRect(cardX - 8, cardY - 8, cardW + 16, cardH + 16);
+          ctx.strokeStyle = S.accent; ctx.lineWidth = 3;
+          ctx.strokeRect(cardX - 8, cardY - 8, cardW + 16, cardH + 16);
+
+          const imgRatio = img.width / img.height;
+          const boxRatio = cardW / cardH;
+          let dw, dh;
+          if (imgRatio > boxRatio) { dw = cardW; dh = cardW / imgRatio; }
+          else { dh = cardH; dw = cardH * imgRatio; }
+          const dx = cardX + (cardW - dw) / 2;
+          const dy = cardY + (cardH - dh) / 2;
+
+          if (data.isReversed) {
+            ctx.save();
+            ctx.translate(dx + dw / 2, dy + dh / 2);
+            ctx.rotate(Math.PI);
+            ctx.drawImage(img, -dw / 2, -dh / 2, dw, dh);
+            ctx.restore();
+          } else {
+            ctx.drawImage(img, dx, dy, dw, dh);
+          }
+          drawn = true;
+        } catch (e) {}
+      }
+
+      if (!drawn) {
+        ctx.fillStyle = "rgba(0,0,0,0.4)";
+        ctx.fillRect(cardX, cardY, cardW, cardH);
+        ctx.strokeStyle = S.accent; ctx.lineWidth = 2;
+        ctx.strokeRect(cardX, cardY, cardW, cardH);
+        ctx.fillStyle = S.accent;
+        ctx.font = `bold 380px serif`;
+        ctx.fillText(data.symbol || "ᚁ", cardCX, cardCY);
+      }
+
+      const nameY = cardY + cardH + 80;
+      ctx.fillStyle = S.textPrimary;
+      ctx.font = `bold 58px ${S.fontHead}`;
+      ctx.fillText(`${data.symbol || ""}  ${data.oghamName || "Ogham"}`, canvas.width / 2, nameY);
+
+      ctx.fillStyle = S.accentDeep;
+      ctx.font = `italic 30px ${S.fontHead}`;
+      ctx.fillText(data.tree || "", canvas.width / 2, nameY + 60);
+
+      const kws = data.keywords || [];
+      const kwY = nameY + 130;
+      ctx.fillStyle = S.accent;
+      ctx.font = `bold 22px ${S.fontMono}`;
+      ctx.fillText(kws.join("  •  ").toUpperCase(), canvas.width / 2, kwY);
+
+      ctx.fillStyle = S.textPrimary;
+      ctx.font = `28px ${S.fontHead}`;
+      const mLines = oghamWrapTextLocal(ctx, data.meaning || "", canvas.width - 200, 4);
+      mLines.forEach((line, i) => {
+        ctx.fillText(line, canvas.width / 2, kwY + 70 + i * 42);
+      });
+
+      ctx.fillStyle = S.accentSoft;
+      ctx.fillRect(120, canvas.height - 130, canvas.width - 240, 1);
+
+      ctx.fillStyle = S.textMuted;
+      ctx.font = `18px ${S.fontMono}`;
+      ctx.fillText("ATMOS OGHAM ENGINE // CELTIC TREE ALPHABET", canvas.width / 2, canvas.height - 90);
+
+      ctx.fillStyle = S.accent;
+      ctx.font = `bold 22px ${S.fontHead}`;
+      ctx.fillText("atoms.free.bg", canvas.width / 2, canvas.height - 55);
+
+      return canvas.toDataURL("image/png");
+    }
+
+    // РЕНДЕР 9: ATMOS NUMEROLOGY (resolved — не зависи от numerology_data.js)
+    function numWrapTextLocal(ctx, text, maxWidth, maxLines) {
+      const words = (text || "").split(" ");
+      const lines = [];
+      let cur = "";
+      for (let i = 0; i < words.length; i++) {
+        const test = cur + words[i] + " ";
+        if (ctx.measureText(test).width > maxWidth && i > 0) {
+          lines.push(cur.trim());
+          cur = words[i] + " ";
+          if (maxLines && lines.length >= maxLines) {
+            if (cur.trim()) lines[lines.length - 1] += "...";
+            return lines;
+          }
+        } else {
+          cur = test;
+        }
+      }
+      if (cur.trim()) lines.push(cur.trim());
+      return lines;
+    }
+
+    async function generateNumerologyCanvasCard(data) {
+      const S = {
+        bgTop: "#1a0505", bgMid: "#2d0a0a", bgBot: "#0a0202",
+        accent: "#d4af37", accentSoft: "rgba(212, 175, 55, 0.35)",
+        accentDeep: "#ffd700", textPrimary: "#f5e6c8",
+        textMuted: "rgba(245, 230, 200, 0.55)",
+        fontHead: "serif", fontMono: "monospace"
+      };
+
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      canvas.width = 1080; canvas.height = 1920;
+
+      const bgGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      bgGrad.addColorStop(0, S.bgTop);
+      bgGrad.addColorStop(0.5, S.bgMid);
+      bgGrad.addColorStop(1, S.bgBot);
+      ctx.fillStyle = bgGrad; ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.fillStyle = "rgba(245, 230, 200, 0.06)";
+      for (let i = 0; i < 500; i++) {
+        ctx.fillRect(Math.random() * canvas.width, Math.random() * canvas.height, 1, 1);
+      }
+
+      ctx.strokeStyle = S.accentSoft; ctx.lineWidth = 2;
+      ctx.strokeRect(40, 40, canvas.width - 80, canvas.height - 80);
+      ctx.strokeStyle = S.accent; ctx.lineWidth = 1;
+      ctx.strokeRect(55, 55, canvas.width - 110, canvas.height - 110);
+
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+
+      const d = data.resolved || {};
+      const subType = data.type.replace("numerology_", "");
+
+      /* FULL */
+      if (subType === "full") {
+        ctx.fillStyle = S.accent; ctx.font = `bold 42px ${S.fontHead}`;
+        ctx.fillText("✦ ATMOS NUMEROLOGY ✦", canvas.width / 2, 120);
+        ctx.fillStyle = S.textMuted; ctx.font = `18px ${S.fontMono}`;
+        ctx.fillText(`FULL ANALYSIS // ${data.date}`, canvas.width / 2, 165);
+        ctx.fillStyle = S.textPrimary; ctx.font = `bold 38px ${S.fontHead}`;
+        ctx.fillText((d.profile && d.profile.name) || "", canvas.width / 2, 220);
+        ctx.fillStyle = S.textMuted; ctx.font = `22px ${S.fontMono}`;
+        ctx.fillText((d.profile && d.profile.date) || "", canvas.width / 2, 260);
+
+        ctx.strokeStyle = S.accentSoft; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(120, 295); ctx.lineTo(canvas.width - 120, 295); ctx.stroke();
+
+        const numbers = [
+          { label: "LIFE PATH",   value: d.lifePath,    title: d.lifePathTitle },
+          { label: "EXPRESSION",  value: d.expression,  title: d.expressionTitle },
+          { label: "SOUL URGE",   value: d.soulUrge,    title: d.soulUrgeTitle },
+          { label: "PERSONALITY", value: d.personality, title: d.personalityTitle },
+          { label: "BIRTHDAY",    value: d.birthday,    title: d.birthdayTitle }
+        ];
+
+        const boxW = 800, boxH = 160, startY = 340, gapY = 30;
+        numbers.forEach((n, i) => {
+          const y = startY + i * (boxH + gapY);
+          const x = (canvas.width - boxW) / 2;
+          ctx.fillStyle = "rgba(0,0,0,0.3)";
+          ctx.fillRect(x, y, boxW, boxH);
+          ctx.strokeStyle = S.accentSoft; ctx.lineWidth = 2;
+          ctx.strokeRect(x, y, boxW, boxH);
+
+          ctx.fillStyle = S.accentDeep;
+          ctx.font = `bold 100px ${S.fontHead}`;
+          ctx.fillText(n.value, x + 110, y + boxH / 2);
+
+          ctx.textAlign = "left";
+          ctx.fillStyle = S.accent;
+          ctx.font = `bold 22px ${S.fontMono}`;
+          ctx.fillText(n.label, x + 220, y + 55);
+          ctx.fillStyle = S.textPrimary;
+          ctx.font = `bold 30px ${S.fontHead}`;
+          ctx.fillText(n.title || "", x + 220, y + 100);
+          ctx.textAlign = "center";
+        });
+
+        const matY = startY + numbers.length * (boxH + gapY) + 20;
+        ctx.fillStyle = S.textMuted;
+        ctx.font = `18px ${S.fontMono}`;
+        ctx.fillText(`MATURITY: ${d.maturity} — ${d.maturityTitle}`, canvas.width / 2, matY + 30);
+      }
+
+      /* COMPATIBILITY */
+      else if (subType === "love" || subType === "biz" || subType === "friend") {
+        const labels = { love: "ЛЮБОВ", biz: "БИЗНЕС", friend: "ПРИЯТЕЛСТВО" };
+        ctx.fillStyle = S.accent; ctx.font = `bold 40px ${S.fontHead}`;
+        ctx.fillText(`✦ СЪВМЕСТИМОСТ ✦`, canvas.width / 2, 110);
+        ctx.fillStyle = S.textMuted; ctx.font = `20px ${S.fontMono}`;
+        ctx.fillText(`${labels[subType]} // ${data.date}`, canvas.width / 2, 155);
+        ctx.strokeStyle = S.accentSoft; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(120, 190); ctx.lineTo(canvas.width - 120, 190); ctx.stroke();
+
+        ctx.fillStyle = S.textPrimary; ctx.font = `bold 34px ${S.fontHead}`;
+        ctx.fillText(d.meName || "", canvas.width / 2, 250);
+        ctx.fillStyle = S.accent; ctx.font = `bold 40px ${S.fontHead}`;
+        ctx.fillText("✕", canvas.width / 2, 310);
+        ctx.fillStyle = S.textPrimary; ctx.font = `bold 34px ${S.fontHead}`;
+        ctx.fillText(d.youName || "", canvas.width / 2, 370);
+
+        ctx.fillStyle = S.accentDeep; ctx.font = `bold 220px ${S.fontHead}`;
+        ctx.fillText((d.score || 0) + "%", canvas.width / 2, 680);
+
+        ctx.fillStyle = S.textPrimary; ctx.font = `italic 28px ${S.fontHead}`;
+        const vLines = numWrapTextLocal(ctx, d.verdictText || "", canvas.width - 240, 5);
+        vLines.forEach((line, i) => {
+          ctx.fillText(line, canvas.width / 2, 900 + i * 44);
+        });
+
+        let yCursor = 1180;
+        (d.details || []).forEach(det => {
+          ctx.fillStyle = "rgba(0,0,0,0.3)";
+          ctx.fillRect(140, yCursor - 40, canvas.width - 280, 130);
+          ctx.strokeStyle = S.accentSoft; ctx.lineWidth = 1;
+          ctx.strokeRect(140, yCursor - 40, canvas.width - 280, 130);
+
+          ctx.fillStyle = S.accent;
+          ctx.font = `bold 24px ${S.fontMono}`;
+          ctx.fillText(det.label, canvas.width / 2, yCursor);
+
+          ctx.fillStyle = S.textPrimary;
+          ctx.font = `bold 36px ${S.fontHead}`;
+          ctx.fillText(det.score + "%", canvas.width / 2, yCursor + 45);
+
+          yCursor += 160;
+        });
+      }
+
+      /* TODAY */
+      else if (subType === "today") {
+        ctx.fillStyle = S.accent; ctx.font = `bold 40px ${S.fontHead}`;
+        ctx.fillText("✦ ЛИЧЕН ДЕН ✦", canvas.width / 2, 120);
+        ctx.fillStyle = S.textMuted; ctx.font = `20px ${S.fontMono}`;
+        ctx.fillText(data.date, canvas.width / 2, 165);
+        ctx.fillStyle = S.textPrimary; ctx.font = `bold 34px ${S.fontHead}`;
+        ctx.fillText(d.meName || "", canvas.width / 2, 220);
+        ctx.strokeStyle = S.accentSoft; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(120, 260); ctx.lineTo(canvas.width - 120, 260); ctx.stroke();
+
+        ctx.fillStyle = S.accentDeep; ctx.font = `bold 240px ${S.fontHead}`;
+        ctx.fillText(d.pd, canvas.width / 2, 520);
+
+        ctx.fillStyle = S.accent; ctx.font = `bold 28px ${S.fontMono}`;
+        ctx.fillText(`ЛИЧНА ГОДИНА: ${d.py} // МЕСЕЦ: ${d.pm} // ДЕН: ${d.pd}`, canvas.width / 2, 700);
+
+        ctx.fillStyle = S.textPrimary; ctx.font = `bold 42px ${S.fontHead}`;
+        ctx.fillText(d.title || "", canvas.width / 2, 800);
+
+        ctx.fillStyle = S.textPrimary; ctx.font = `italic 28px ${S.fontHead}`;
+        const pLines = numWrapTextLocal(ctx, d.pdText || "", canvas.width - 240, 5);
+        pLines.forEach((line, i) => {
+          ctx.fillText(line, canvas.width / 2, 900 + i * 44);
+        });
+
+        ctx.fillStyle = S.textMuted; ctx.font = `24px ${S.fontHead}`;
+        const dLines = numWrapTextLocal(ctx, d.pyDescription || "", canvas.width - 240, 6);
+        dLines.forEach((line, i) => {
+          ctx.fillText(line, canvas.width / 2, 1200 + i * 40);
+        });
+      }
+
+      /* FOOTER */
+      ctx.strokeStyle = S.accentSoft; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(120, canvas.height - 130); ctx.lineTo(canvas.width - 120, canvas.height - 130); ctx.stroke();
+      ctx.fillStyle = S.textMuted; ctx.font = `18px ${S.fontMono}`;
+      ctx.fillText("ATMOS NUMEROLOGY ENGINE // PYTHAGOREAN", canvas.width / 2, canvas.height - 90);
+      ctx.fillStyle = S.accent; ctx.font = `bold 22px ${S.fontHead}`;
+      ctx.fillText("atoms.free.bg", canvas.width / 2, canvas.height - 55);
+
+      return canvas.toDataURL("image/png");
+    }
+
+    // РЕНДЕР 8: ATMOS OGHAM READING (1080x1920)
+    async function generateOghamReadingCanvasCard(data) {
+      const S = {
+        bgTop: "#0a1410", bgMid: "#14261c", bgBot: "#050a07",
+        accent: "#88c999", accentSoft: "rgba(136, 201, 153, 0.35)",
+        accentDeep: "#d4af37", textPrimary: "#e8f5e9",
+        textMuted: "rgba(232, 245, 233, 0.55)",
+        fontHead: "serif", fontMono: "monospace"
+      };
+
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      canvas.width = 1080; canvas.height = 1920;
+
+      const bgGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      bgGrad.addColorStop(0, S.bgTop);
+      bgGrad.addColorStop(0.5, S.bgMid);
+      bgGrad.addColorStop(1, S.bgBot);
+      ctx.fillStyle = bgGrad; ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.fillStyle = "rgba(200, 240, 210, 0.10)";
+      for (let i = 0; i < 400; i++) {
+        ctx.fillRect(Math.random() * canvas.width, Math.random() * canvas.height, 1, 1);
+      }
+      ctx.fillStyle = "rgba(212, 175, 55, 0.04)";
+      for (let i = 0; i < 8; i++) {
+        ctx.fillRect(0, Math.random() * canvas.height, canvas.width, 1 + Math.random() * 2);
+      }
+
+      ctx.strokeStyle = S.accentSoft; ctx.lineWidth = 2;
+      ctx.strokeRect(40, 40, canvas.width - 80, canvas.height - 80);
+      ctx.strokeStyle = S.accent; ctx.lineWidth = 1;
+      ctx.strokeRect(55, 55, canvas.width - 110, canvas.height - 110);
+
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+
+      ctx.fillStyle = S.accentDeep; ctx.font = `bold 36px serif`;
+      ctx.fillText("ᚁ", 95, 95); ctx.fillText("ᚔ", canvas.width - 95, 95);
+      ctx.fillText("ᚂ", 95, canvas.height - 95); ctx.fillText("ᚓ", canvas.width - 95, canvas.height - 95);
+
+      ctx.fillStyle = S.accent; ctx.font = `bold 40px ${S.fontHead}`;
+      ctx.fillText("✦ ATMOS OGHAM READING ✦", canvas.width / 2, 110);
+
+      ctx.fillStyle = S.textMuted; ctx.font = `18px ${S.fontMono}`;
+      ctx.fillText(`${data.spreadName || 'SPREAD'} // ${data.date || ''}`, canvas.width / 2, 155);
+
+      ctx.strokeStyle = S.accentSoft; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(120, 190); ctx.lineTo(canvas.width - 120, 190); ctx.stroke();
+
+      ctx.fillStyle = S.accent; ctx.font = `bold 22px ${S.fontMono}`;
+      ctx.fillText("ВЪПРОС", canvas.width / 2, 235);
+
+      ctx.fillStyle = S.textPrimary; ctx.font = `bold 32px ${S.fontHead}`;
+      const qLines = oghamWrapTextLocal(ctx, data.question, canvas.width - 200, 3);
+      qLines.forEach((line, i) => {
+        const prefix = i === 0 ? '"' : '';
+        const suffix = i === qLines.length - 1 ? '"' : '';
+        ctx.fillText(prefix + line + suffix, canvas.width / 2, 285 + i * 42);
+      });
+
+      const items = data.items || [];
+      const layout = oghamGetLayoutLocal(items.length);
+      const cardY = layout.cardY;
+
+      for (let i = 0; i < items.length; i++) {
+        const o = items[i];
+        const cx = layout.startX + i * (layout.cardW + layout.gap);
+
+        ctx.fillStyle = "rgba(0,0,0,0.4)";
+        ctx.fillRect(cx - 4, cardY - 4, layout.cardW + 8, layout.cardH + 8);
+        ctx.strokeStyle = S.accent; ctx.lineWidth = 2;
+        ctx.strokeRect(cx - 4, cardY - 4, layout.cardW + 8, layout.cardH + 8);
+
+        let drawn = false;
+        if (o.imageUrl) {
+          try {
+            const img = await new Promise((resolve, reject) => {
+              const ii = new Image();
+              ii.crossOrigin = "anonymous";
+              ii.onload = () => resolve(ii);
+              ii.onerror = () => reject(new Error("load-failed"));
+              ii.src = o.imageUrl;
+            });
+
+            const imgRatio = img.width / img.height;
+            const boxRatio = layout.cardW / layout.cardH;
+            let dw, dh;
+            if (imgRatio > boxRatio) { dw = layout.cardW; dh = layout.cardW / imgRatio; }
+            else { dh = layout.cardH; dw = layout.cardH * imgRatio; }
+            const dx = cx + (layout.cardW - dw) / 2;
+            const dy = cardY + (layout.cardH - dh) / 2;
+
+            if (o.isReversed) {
+              ctx.save();
+              ctx.translate(dx + dw / 2, dy + dh / 2);
+              ctx.rotate(Math.PI);
+              ctx.drawImage(img, -dw / 2, -dh / 2, dw, dh);
+              ctx.restore();
+            } else {
+              ctx.drawImage(img, dx, dy, dw, dh);
+            }
+            drawn = true;
+          } catch (e) {}
+        }
+
+        if (!drawn) {
+          ctx.fillStyle = S.accent;
+          ctx.font = `bold ${Math.floor(layout.cardW * 0.7)}px serif`;
+          ctx.fillText(o.symbol || "ᚁ", cx + layout.cardW / 2, cardY + layout.cardH / 2);
+        }
+      }
+
+      let yCursor = cardY + layout.cardH + 60;
+      const posFontSize = items.length >= 5 ? 20 : 24;
+      const nameFontSize = items.length >= 5 ? 22 : 26;
+      const meaningFontSize = items.length >= 5 ? 22 : 24;
+
+      for (let i = 0; i < items.length; i++) {
+        const o = items[i];
+        const pos = (data.positions && data.positions[i]) || `БУКВА ${i + 1}`;
+        const dir = o.isReversed ? "обърната" : "права";
+
+        ctx.fillStyle = S.accent;
+        ctx.font = `bold ${posFontSize}px ${S.fontMono}`;
+        ctx.fillText(`[${pos}]`, canvas.width / 2, yCursor);
+        yCursor += posFontSize + 10;
+
+        ctx.fillStyle = S.textPrimary;
+        ctx.font = `bold ${nameFontSize}px ${S.fontHead}`;
+        ctx.fillText(`${o.symbol} ${o.name} (${o.tree}, ${dir})`, canvas.width / 2, yCursor);
+        yCursor += nameFontSize + 10;
+
+        ctx.fillStyle = S.textMuted;
+        ctx.font = `${meaningFontSize}px ${S.fontHead}`;
+        const mLines = oghamWrapTextLocal(ctx, o.meaning, canvas.width - 260, 2);
+        mLines.forEach(line => {
+          ctx.fillText(line, canvas.width / 2, yCursor);
+          yCursor += meaningFontSize + 8;
+        });
+
+        yCursor += 12;
+      }
+
+      yCursor += 6;
+      ctx.strokeStyle = S.accentSoft; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(120, yCursor); ctx.lineTo(canvas.width - 120, yCursor); ctx.stroke();
+      yCursor += 46;
+
+      ctx.fillStyle = S.accent;
+      ctx.font = `bold 24px ${S.fontMono}`;
+      ctx.fillText("[ОБОБЩЕНИЕ]", canvas.width / 2, yCursor);
+      yCursor += 40;
+
+      ctx.fillStyle = S.textPrimary;
+      ctx.font = `italic 24px ${S.fontHead}`;
+      const sLines = oghamWrapTextLocal(ctx, data.summary || "", canvas.width - 200, 4);
+      sLines.forEach(line => {
+        ctx.fillText(line, canvas.width / 2, yCursor);
+        yCursor += 34;
+      });
+
+      ctx.strokeStyle = S.accentSoft; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(120, canvas.height - 130); ctx.lineTo(canvas.width - 120, canvas.height - 130); ctx.stroke();
+
+      ctx.fillStyle = S.textMuted;
+      ctx.font = `18px ${S.fontMono}`;
+      ctx.fillText(`ATMOS OGHAM ENGINE // ${data.spreadName || 'SPREAD'}`, canvas.width / 2, canvas.height - 90);
+
+      ctx.fillStyle = S.accent;
+      ctx.font = `bold 22px ${S.fontHead}`;
+      ctx.fillText("atoms.free.bg", canvas.width / 2, canvas.height - 55);
+
+      return canvas.toDataURL("image/png");
+    }
+
+    // РЕНДЕР 6: ATMOS RUNES READING (1080x1920) + RUNIC WHEEL
+    function runesWrapTextLocal(ctx, text, maxWidth, maxLines) {
+      const words = (text || "").split(" ");
+      const lines = [];
+      let cur = "";
+      for (let i = 0; i < words.length; i++) {
+        const test = cur + words[i] + " ";
+        if (ctx.measureText(test).width > maxWidth && i > 0) {
+          lines.push(cur.trim());
+          cur = words[i] + " ";
+          if (maxLines && lines.length >= maxLines) {
+            if (cur.trim()) lines[lines.length - 1] += "...";
+            return lines;
+          }
+        } else {
+          cur = test;
+        }
+      }
+      if (cur.trim()) lines.push(cur.trim());
+      return lines;
+    }
+
+    function runesGetLayoutLocal(count) {
+      const usable = 1080 - 200;
+      let gap, cardW;
+      if (count <= 3) { gap = 30; }
+      else if (count === 4) { gap = 22; }
+      else { gap = 16; }
+
+      cardW = Math.floor((usable - gap * (count - 1)) / count);
+      if (count <= 3) cardW = Math.min(cardW, 260);
+
+      const cardH = Math.floor(cardW * 1.5);
+      const totalW = count * cardW + (count - 1) * gap;
+      const startX = (1080 - totalW) / 2;
+      return { cardW, cardH, gap, startX, cardY: 500 };
+    }
+
+    async function generateRunesReadingCanvasCard(data) {
+      const S = {
+        bgTop: "#071018", bgMid: "#0d1b2a", bgBot: "#030608",
+        accent: "#8ecae6", accentSoft: "rgba(142, 202, 230, 0.35)",
+        accentDeep: "#64ffda", textPrimary: "#e0f4ff",
+        textMuted: "rgba(224, 244, 255, 0.55)",
+        fontHead: "serif", fontMono: "monospace"
+      };
+
+      /* ============ СПЕЦИАЛЕН РЕНДЕР: RUNIC WHEEL ============ */
+      if (data.spreadKey === "wheel") {
+        return await generateRunicWheelCanvasCard(data, S);
+      }
+
+      /* ============ СТАНДАРТЕН РЕНДЕР ============ */
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      canvas.width = 1080; canvas.height = 1920;
+
+      const bgGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      bgGrad.addColorStop(0, S.bgTop);
+      bgGrad.addColorStop(0.5, S.bgMid);
+      bgGrad.addColorStop(1, S.bgBot);
+      ctx.fillStyle = bgGrad; ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.fillStyle = "rgba(200, 230, 255, 0.10)";
+      for (let i = 0; i < 400; i++) {
+        ctx.fillRect(Math.random() * canvas.width, Math.random() * canvas.height, 1, 1);
+      }
+      ctx.fillStyle = "rgba(100, 255, 218, 0.05)";
+      for (let i = 0; i < 6; i++) {
+        ctx.fillRect(0, Math.random() * canvas.height, canvas.width, 1 + Math.random() * 3);
+      }
+
+      ctx.strokeStyle = S.accentSoft; ctx.lineWidth = 2;
+      ctx.strokeRect(40, 40, canvas.width - 80, canvas.height - 80);
+      ctx.strokeStyle = S.accent; ctx.lineWidth = 1;
+      ctx.strokeRect(55, 55, canvas.width - 110, canvas.height - 110);
+
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+
+      ctx.fillStyle = S.accentDeep; ctx.font = `bold 36px serif`;
+      ctx.fillText("ᚠ", 95, 95); ctx.fillText("ᛟ", canvas.width - 95, 95);
+      ctx.fillText("ᚦ", 95, canvas.height - 95); ctx.fillText("ᛞ", canvas.width - 95, canvas.height - 95);
+
+      ctx.fillStyle = S.accent; ctx.font = `bold 40px ${S.fontHead}`;
+      ctx.fillText("✦ ATMOS RUNES READING ✦", canvas.width / 2, 110);
+
+      ctx.fillStyle = S.textMuted; ctx.font = `18px ${S.fontMono}`;
+      ctx.fillText(`${data.spreadName || 'SPREAD'} // ${data.date || ''}`, canvas.width / 2, 155);
+
+      ctx.strokeStyle = S.accentSoft; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(120, 190); ctx.lineTo(canvas.width - 120, 190); ctx.stroke();
+
+      ctx.fillStyle = S.accent; ctx.font = `bold 22px ${S.fontMono}`;
+      ctx.fillText("ВЪПРОС", canvas.width / 2, 235);
+
+      ctx.fillStyle = S.textPrimary; ctx.font = `bold 32px ${S.fontHead}`;
+      const qLines = runesWrapTextLocal(ctx, data.question, canvas.width - 200, 3);
+      qLines.forEach((line, i) => {
+        const prefix = i === 0 ? '"' : '';
+        const suffix = i === qLines.length - 1 ? '"' : '';
+        ctx.fillText(prefix + line + suffix, canvas.width / 2, 285 + i * 42);
+      });
+
+      const runes = data.runes || [];
+      const layout = runesGetLayoutLocal(runes.length);
+      const cardY = layout.cardY;
+
+      for (let i = 0; i < runes.length; i++) {
+        const r = runes[i];
+        const cx = layout.startX + i * (layout.cardW + layout.gap);
+
+        ctx.fillStyle = "rgba(0,0,0,0.4)";
+        ctx.fillRect(cx - 4, cardY - 4, layout.cardW + 8, layout.cardH + 8);
+        ctx.strokeStyle = S.accent; ctx.lineWidth = 2;
+        ctx.strokeRect(cx - 4, cardY - 4, layout.cardW + 8, layout.cardH + 8);
+
+        let drawn = false;
+        if (r.imageUrl) {
+          try {
+            const img = await new Promise((resolve, reject) => {
+              const ii = new Image();
+              ii.crossOrigin = "anonymous";
+              ii.onload = () => resolve(ii);
+              ii.onerror = () => reject(new Error("load-failed"));
+              ii.src = r.imageUrl;
+            });
+
+            const imgRatio = img.width / img.height;
+            const boxRatio = layout.cardW / layout.cardH;
+            let dw, dh;
+            if (imgRatio > boxRatio) { dw = layout.cardW; dh = layout.cardW / imgRatio; }
+            else { dh = layout.cardH; dw = layout.cardH * imgRatio; }
+            const dx = cx + (layout.cardW - dw) / 2;
+            const dy = cardY + (layout.cardH - dh) / 2;
+
+            if (r.isReversed) {
+              ctx.save();
+              ctx.translate(dx + dw / 2, dy + dh / 2);
+              ctx.rotate(Math.PI);
+              ctx.drawImage(img, -dw / 2, -dh / 2, dw, dh);
+              ctx.restore();
+            } else {
+              ctx.drawImage(img, dx, dy, dw, dh);
+            }
+            drawn = true;
+          } catch (e) {}
+        }
+
+        if (!drawn) {
+          ctx.fillStyle = S.accent;
+          ctx.font = `bold ${Math.floor(layout.cardW * 0.7)}px serif`;
+          ctx.fillText(r.symbol || "ᚠ", cx + layout.cardW / 2, cardY + layout.cardH / 2);
+        }
+      }
+
+      let yCursor = cardY + layout.cardH + 60;
+      const posFontSize = runes.length >= 5 ? 20 : 24;
+      const nameFontSize = runes.length >= 5 ? 22 : 26;
+      const meaningFontSize = runes.length >= 5 ? 22 : 24;
+
+      for (let i = 0; i < runes.length; i++) {
+        const r = runes[i];
+        const pos = (data.positions && data.positions[i]) || `РУНА ${i + 1}`;
+        const dir = r.noReversed ? "права" : (r.isReversed ? "обърната" : "права");
+
+        ctx.fillStyle = S.accent;
+        ctx.font = `bold ${posFontSize}px ${S.fontMono}`;
+        ctx.fillText(`[${pos}]`, canvas.width / 2, yCursor);
+        yCursor += posFontSize + 10;
+
+        ctx.fillStyle = S.textPrimary;
+        ctx.font = `bold ${nameFontSize}px ${S.fontHead}`;
+        ctx.fillText(`${r.symbol} ${r.name} (${dir})`, canvas.width / 2, yCursor);
+        yCursor += nameFontSize + 10;
+
+        ctx.fillStyle = S.textMuted;
+        ctx.font = `${meaningFontSize}px ${S.fontHead}`;
+        const mLines = runesWrapTextLocal(ctx, r.meaning, canvas.width - 260, 2);
+        mLines.forEach(line => {
+          ctx.fillText(line, canvas.width / 2, yCursor);
+          yCursor += meaningFontSize + 8;
+        });
+
+        yCursor += 12;
+      }
+
+      yCursor += 6;
+      ctx.strokeStyle = S.accentSoft; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(120, yCursor); ctx.lineTo(canvas.width - 120, yCursor); ctx.stroke();
+      yCursor += 46;
+
+      ctx.fillStyle = S.accent;
+      ctx.font = `bold 24px ${S.fontMono}`;
+      ctx.fillText("[ОБОБЩЕНИЕ]", canvas.width / 2, yCursor);
+      yCursor += 40;
+
+      ctx.fillStyle = S.textPrimary;
+      ctx.font = `italic 24px ${S.fontHead}`;
+      const sLines = runesWrapTextLocal(ctx, data.summary || "", canvas.width - 200, 4);
+      sLines.forEach(line => {
+        ctx.fillText(line, canvas.width / 2, yCursor);
+        yCursor += 34;
+      });
+
+      ctx.strokeStyle = S.accentSoft; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(120, canvas.height - 130); ctx.lineTo(canvas.width - 120, canvas.height - 130); ctx.stroke();
+
+      ctx.fillStyle = S.textMuted;
+      ctx.font = `18px ${S.fontMono}`;
+      ctx.fillText(`ATMOS RUNES ENGINE // ${data.spreadName || 'SPREAD'}`, canvas.width / 2, canvas.height - 90);
+
+      ctx.fillStyle = S.accent;
+      ctx.font = `bold 22px ${S.fontHead}`;
+      ctx.fillText("atoms.free.bg", canvas.width / 2, canvas.height - 55);
+
+      return canvas.toDataURL("image/png");
+    }
+
+    // СПЕЦИАЛЕН РЕНДЕР: RUNIC WHEEL
+    async function generateRunicWheelCanvasCard(data, S) {
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      canvas.width = 1080; canvas.height = 1920;
+
+      /* ФОН */
+      const bgGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      bgGrad.addColorStop(0, S.bgTop);
+      bgGrad.addColorStop(0.5, S.bgMid);
+      bgGrad.addColorStop(1, S.bgBot);
+      ctx.fillStyle = bgGrad; ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.fillStyle = "rgba(200, 230, 255, 0.10)";
+      for (let i = 0; i < 500; i++) {
+        ctx.fillRect(Math.random() * canvas.width, Math.random() * canvas.height, 1, 1);
+      }
+
+      ctx.strokeStyle = S.accentSoft; ctx.lineWidth = 2;
+      ctx.strokeRect(40, 40, canvas.width - 80, canvas.height - 80);
+      ctx.strokeStyle = S.accent; ctx.lineWidth = 1;
+      ctx.strokeRect(55, 55, canvas.width - 110, canvas.height - 110);
+
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+
+      ctx.fillStyle = S.accentDeep; ctx.font = `bold 36px serif`;
+      ctx.fillText("ᚠ", 95, 95); ctx.fillText("ᛟ", canvas.width - 95, 95);
+      ctx.fillText("ᚦ", 95, canvas.height - 95); ctx.fillText("ᛞ", canvas.width - 95, canvas.height - 95);
+
+      ctx.fillStyle = S.accent; ctx.font = `bold 44px ${S.fontHead}`;
+      ctx.fillText("✦ РУНЕН КРЪГ ✦", canvas.width / 2, 100);
+
+      ctx.fillStyle = S.textMuted; ctx.font = `18px ${S.fontMono}`;
+      ctx.fillText(`RUNIC WHEEL // ${data.date || ''}`, canvas.width / 2, 145);
+
+      ctx.strokeStyle = S.accentSoft; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(120, 175); ctx.lineTo(canvas.width - 120, 175); ctx.stroke();
+
+      ctx.fillStyle = S.accent; ctx.font = `bold 18px ${S.fontMono}`;
+      ctx.fillText("ВЪПРОС", canvas.width / 2, 205);
+
+      ctx.fillStyle = S.textPrimary; ctx.font = `bold 26px ${S.fontHead}`;
+      const qLines = runesWrapTextLocal(ctx, data.question, canvas.width - 220, 2);
+      qLines.forEach((line, i) => {
+        const prefix = i === 0 ? '"' : '';
+        const suffix = i === qLines.length - 1 ? '"' : '';
+        ctx.fillText(prefix + line + suffix, canvas.width / 2, 240 + i * 32);
+      });
+
+      /* КРЪГ */
+      const runes = data.runes || [];
+      const n = runes.length;
+      const wheelCX = 540;
+      const wheelCY = 740;
+      const radius = 340;
+      const cardW = 130;
+      const cardH = 180;
+
+      ctx.strokeStyle = "rgba(142, 202, 230, 0.10)";
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(wheelCX, wheelCY, radius, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(wheelCX, wheelCY, radius + 110, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(wheelCX, wheelCY, radius - 110, 0, Math.PI * 2); ctx.stroke();
+
+      for (let i = 0; i < n; i++) {
+        const angleDeg = i * (360 / n);
+        const angleRad = angleDeg * Math.PI / 180;
+        const pcx = wheelCX + radius * Math.sin(angleRad);
+        const pcy = wheelCY - radius * Math.cos(angleRad);
+        const cardX = pcx - cardW / 2;
+        const cardY = pcy - cardH / 2;
+
+        ctx.fillStyle = "rgba(0,0,0,0.4)";
+        ctx.fillRect(cardX - 3, cardY - 3, cardW + 6, cardH + 6);
+        ctx.strokeStyle = S.accent; ctx.lineWidth = 2;
+        ctx.strokeRect(cardX - 3, cardY - 3, cardW + 6, cardH + 6);
+
+        const r = runes[i];
+        let drawn = false;
+        if (r.imageUrl) {
+          try {
+            const img = await new Promise((resolve, reject) => {
+              const ii = new Image();
+              ii.crossOrigin = "anonymous";
+              ii.onload = () => resolve(ii);
+              ii.onerror = () => reject(new Error("load-failed"));
+              ii.src = r.imageUrl;
+            });
+
+            const imgRatio = img.width / img.height;
+            const boxRatio = cardW / cardH;
+            let dw, dh;
+            if (imgRatio > boxRatio) { dw = cardW; dh = cardW / imgRatio; }
+            else { dh = cardH; dw = cardH * imgRatio; }
+            const dx = cardX + (cardW - dw) / 2;
+            const dy = cardY + (cardH - dh) / 2;
+
+            if (r.isReversed) {
+              ctx.save();
+              ctx.translate(dx + dw / 2, dy + dh / 2);
+              ctx.rotate(Math.PI);
+              ctx.drawImage(img, -dw / 2, -dh / 2, dw, dh);
+              ctx.restore();
+            } else {
+              ctx.drawImage(img, dx, dy, dw, dh);
+            }
+            drawn = true;
+          } catch (e) {}
+        }
+
+        if (!drawn) {
+          ctx.fillStyle = S.accent;
+          ctx.font = `bold ${Math.floor(cardW * 0.7)}px serif`;
+          ctx.fillText(r.symbol || "ᚠ", pcx, pcy);
+        }
+
+        ctx.fillStyle = S.accentDeep;
+        ctx.beginPath();
+        ctx.arc(cardX + 4, cardY + 4, 16, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = S.bgTop;
+        ctx.font = `bold 18px ${S.fontMono}`;
+        ctx.textAlign = "center";
+        ctx.fillText(String(i + 1), cardX + 4, cardY + 5);
+      }
+
+      /* ЛЕГЕНДА */
+      const legendTop = 1200;
+      ctx.strokeStyle = S.accentSoft; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(120, legendTop - 20); ctx.lineTo(canvas.width - 120, legendTop - 20); ctx.stroke();
+
+      ctx.fillStyle = S.accent;
+      ctx.font = `bold 22px ${S.fontMono}`;
+      ctx.textAlign = "center";
+      ctx.fillText("[ЛЕГЕНДА]", canvas.width / 2, legendTop + 10);
+
+      const col1X = 90;
+      const col2X = 570;
+      const listStartY = legendTop + 60;
+      const lineH = 34;
+      const fs = 18;
+
+      for (let i = 0; i < runes.length; i++) {
+        const r = runes[i];
+        const col = i < 6 ? 0 : 1;
+        const row = i < 6 ? i : i - 6;
+        const x = col === 0 ? col1X : col2X;
+        const y = listStartY + row * lineH;
+
+        ctx.textAlign = "left";
+        ctx.fillStyle = S.accent;
+        ctx.font = `bold ${fs}px ${S.fontMono}`;
+        ctx.fillText(`${i + 1}.`, x, y);
+
+        ctx.fillStyle = S.textPrimary;
+        ctx.font = `bold ${fs}px ${S.fontHead}`;
+        ctx.fillText(r.name || "", x + 35, y);
+
+        ctx.fillStyle = S.textMuted;
+        ctx.font = `${fs - 2}px ${S.fontHead}`;
+        const dir = r.isReversed ? "(обърн.)" : "(права)";
+        ctx.fillText(dir, x + 35 + 120, y);
+      }
+      ctx.textAlign = "center";
+
+      /* ОБОБЩЕНИЕ */
+      const summaryY = listStartY + 6 * lineH + 55;
+      ctx.strokeStyle = S.accentSoft; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(120, summaryY - 20); ctx.lineTo(canvas.width - 120, summaryY - 20); ctx.stroke();
+
+      ctx.fillStyle = S.accent;
+      ctx.font = `bold 22px ${S.fontMono}`;
+      ctx.fillText("[ОБОБЩЕНИЕ]", canvas.width / 2, summaryY + 10);
+
+      ctx.fillStyle = S.textPrimary;
+      ctx.font = `italic 20px ${S.fontHead}`;
+      const sLines = runesWrapTextLocal(ctx, data.summary || "", canvas.width - 200, 3);
+      sLines.forEach((line, i) => {
+        ctx.fillText(line, canvas.width / 2, summaryY + 50 + i * 30);
+      });
+
+      /* FOOTER */
+      ctx.strokeStyle = S.accentSoft; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(120, canvas.height - 130); ctx.lineTo(canvas.width - 120, canvas.height - 130); ctx.stroke();
+
+      ctx.fillStyle = S.textMuted;
+      ctx.font = `18px ${S.fontMono}`;
+      ctx.fillText("ATMOS RUNES ENGINE // RUNIC WHEEL", canvas.width / 2, canvas.height - 90);
+
+      ctx.fillStyle = S.accent;
+      ctx.font = `bold 22px ${S.fontHead}`;
+      ctx.fillText("atoms.free.bg", canvas.width / 2, canvas.height - 55);
+
+      return canvas.toDataURL("image/png");
+    }
+
+    // РЕНДЕР 3: ATMOS TAROT (1080x1920)
+    async function generateTarotCanvasCard(data) {
+      const STYLE = {
+        bgTop:      "#0a0514",
+        bgMid:      "#1a0b2e",
+        bgBot:      "#05020a",
+        accent:     "#d4af37",
+        accentSoft: "rgba(212, 175, 55, 0.35)",
+        textPrimary:"#f5e6c8",
+        textMuted:  "rgba(245, 230, 200, 0.55)",
+        fontHead:   "serif",
+        fontMono:   "monospace"
+      };
+
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      canvas.width = 1080;
+      canvas.height = 1920;
+
+      /* ---------- ФОН ---------- */
+      const bgGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      bgGrad.addColorStop(0, STYLE.bgTop);
+      bgGrad.addColorStop(0.5, STYLE.bgMid);
+      bgGrad.addColorStop(1, STYLE.bgBot);
+      ctx.fillStyle = bgGrad;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      /* ---------- ЗВЕЗДИ ---------- */
+      ctx.fillStyle = "rgba(255, 255, 255, 0.08)";
+      for (let i = 0; i < 300; i++) {
+        const sx = Math.random() * canvas.width;
+        const sy = Math.random() * canvas.height;
+        const sr = Math.random() < 0.9 ? 1 : 2;
+        ctx.fillRect(sx, sy, sr, sr);
+      }
+
+      /* ---------- РАМКА ---------- */
+      ctx.strokeStyle = STYLE.accentSoft;
+      ctx.lineWidth = 2;
+      ctx.strokeRect(40, 40, canvas.width - 80, canvas.height - 80);
+      ctx.strokeStyle = STYLE.accent;
+      ctx.lineWidth = 1;
+      ctx.strokeRect(55, 55, canvas.width - 110, canvas.height - 110);
+
+      /* ---------- ХЕДЪР ---------- */
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+
+      ctx.fillStyle = STYLE.accent;
+      ctx.font = `bold 42px ${STYLE.fontHead}`;
+      ctx.fillText("✦ ATMOS TAROT ✦", canvas.width / 2, 140);
+
+      ctx.fillStyle = STYLE.textMuted;
+      ctx.font = `20px ${STYLE.fontMono}`;
+      ctx.fillText(`CARD OF THE DAY // ${data.date || 'ACTIVE'}`, canvas.width / 2, 190);
+
+      /* ---------- ПОЗИЦИЯ ---------- */
+      const posText = data.isReversed ? "⚏ ОБЪРНАТА" : "⚏ ПРАВА";
+      ctx.fillStyle = data.isReversed ? "#ff8888" : STYLE.accent;
+      ctx.font = `bold 24px ${STYLE.fontMono}`;
+      ctx.fillText(posText, canvas.width / 2, 245);
+
+      /* ---------- КАРТИНКА ---------- */
+      const cardX = 190;
+      const cardY = 300;
+      const cardW = canvas.width - 380;
+      const cardH = 1100;
+      const cardCX = cardX + cardW / 2;
+      const cardCY = cardY + cardH / 2;
+
+      let imgLoaded = false;
+
+      if (data.imageUrl) {
+        try {
+          const img = await new Promise((resolve, reject) => {
+            const i = new Image();
+            i.crossOrigin = "anonymous";
+            i.onload = () => resolve(i);
+            i.onerror = () => reject(new Error("load-failed"));
+            i.src = data.imageUrl;
+          });
+
+          ctx.fillStyle = "rgba(0,0,0,0.35)";
+          ctx.fillRect(cardX - 8, cardY - 8, cardW + 16, cardH + 16);
+          ctx.strokeStyle = STYLE.accent;
+          ctx.lineWidth = 3;
+          ctx.strokeRect(cardX - 8, cardY - 8, cardW + 16, cardH + 16);
+
+          const imgRatio = img.width / img.height;
+          const boxRatio = cardW / cardH;
+          let dw, dh;
+          if (imgRatio > boxRatio) { dw = cardW; dh = cardW / imgRatio; }
+          else { dh = cardH; dw = cardH * imgRatio; }
+          const dx = cardX + (cardW - dw) / 2;
+          const dy = cardY + (cardH - dh) / 2;
+
+          if (data.isReversed) {
+            ctx.save();
+            ctx.translate(dx + dw / 2, dy + dh / 2);
+            ctx.rotate(Math.PI);
+            ctx.drawImage(img, -dw / 2, -dh / 2, dw, dh);
+            ctx.restore();
+          } else {
+            ctx.drawImage(img, dx, dy, dw, dh);
+          }
+          imgLoaded = true;
+        } catch (e) {
+          console.warn("Tarot image load failed:", e);
+        }
+      }
+
+      if (!imgLoaded) {
+        ctx.fillStyle = "rgba(0,0,0,0.4)";
+        ctx.fillRect(cardX, cardY, cardW, cardH);
+        ctx.strokeStyle = STYLE.accent;
+        ctx.lineWidth = 2;
+        ctx.strokeRect(cardX, cardY, cardW, cardH);
+        ctx.fillStyle = STYLE.accent;
+        ctx.font = `bold 320px serif`;
+        ctx.fillText(data.symbol || "✦", cardCX, cardCY);
+        ctx.fillStyle = STYLE.textMuted;
+        ctx.font = `18px monospace`;
+        ctx.fillText("[ картинката не се зареди ]", cardCX, cardY + cardH - 40);
+      }
+
+      /* ---------- ИМЕ ---------- */
+      const nameY = cardY + cardH + 70;
+      ctx.fillStyle = STYLE.textPrimary;
+      ctx.font = `bold 56px ${STYLE.fontHead}`;
+      ctx.fillText(data.cardName || "Tarot", canvas.width / 2, nameY);
+
+      ctx.fillStyle = STYLE.textMuted;
+      ctx.font = `italic 26px ${STYLE.fontHead}`;
+      ctx.fillText(data.cardNameEn || "", canvas.width / 2, nameY + 50);
+
+      /* ---------- КЛЮЧОВИ ДУМИ ---------- */
+      const kws = data.keywords || [];
+      const kwY = nameY + 110;
+      const kwText = kws.join("  •  ");
+      ctx.fillStyle = STYLE.accent;
+      ctx.font = `bold 22px ${STYLE.fontMono}`;
+      ctx.fillText(kwText.toUpperCase(), canvas.width / 2, kwY);
+
+      /* ---------- ОПИСАНИЕ ---------- */
+      const meaning = data.meaning || "";
+      ctx.fillStyle = STYLE.textPrimary;
+      ctx.font = `28px ${STYLE.fontHead}`;
+
+      const maxWidth = canvas.width - 200;
+      const words = meaning.split(" ");
+      const lines = [];
+      let current = "";
+      for (let i = 0; i < words.length; i++) {
+        const test = current + words[i] + " ";
+        if (ctx.measureText(test).width > maxWidth && i > 0) {
+          lines.push(current.trim());
+          current = words[i] + " ";
+        } else {
+          current = test;
+        }
+      }
+      lines.push(current.trim());
+
+      const descStartY = kwY + 70;
+      const lineH = 42;
+      for (let i = 0; i < lines.length; i++) {
+        ctx.fillText(lines[i], canvas.width / 2, descStartY + i * lineH);
+      }
+
+      /* ---------- FOOTER ---------- */
+      ctx.fillStyle = STYLE.accentSoft;
+      ctx.fillRect(120, canvas.height - 130, canvas.width - 240, 1);
+
+      ctx.fillStyle = STYLE.textMuted;
+      ctx.font = `18px ${STYLE.fontMono}`;
+      ctx.fillText("ATMOS TAROT ENGINE // 78 CARDS", canvas.width / 2, canvas.height - 90);
+
+      ctx.fillStyle = STYLE.accent;
+      ctx.font = `bold 22px ${STYLE.fontHead}`;
+      ctx.fillText("atoms.free.bg", canvas.width / 2, canvas.height - 55);
+
+      return canvas.toDataURL("image/png");
+    }
+
+    // РЕНДЕР 11: ATMOS CHAKRAS
+    function chakraWrapTextLocal(ctx, text, maxWidth, maxLines) {
+      const words = (text || "").split(" ");
+      const lines = [];
+      let cur = "";
+      for (let i = 0; i < words.length; i++) {
+        const test = cur + words[i] + " ";
+        if (ctx.measureText(test).width > maxWidth && i > 0) {
+          lines.push(cur.trim());
+          cur = words[i] + " ";
+          if (maxLines && lines.length >= maxLines) {
+            if (cur.trim()) lines[lines.length - 1] += "...";
+            return lines;
+          }
+        } else {
+          cur = test;
+        }
+      }
+      if (cur.trim()) lines.push(cur.trim());
+      return lines;
+    }
+
+    function drawLotusLocal(ctx, cx, cy, radius, petals, color, mantra) {
+      const petalCount = petals > 40 ? 40 : petals;
+      for (let i = 0; i < petalCount; i++) {
+        const angle = (i / petalCount) * Math.PI * 2 - Math.PI / 2;
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(angle);
+        ctx.beginPath();
+        const py = -radius * 0.75;
+        const rx = radius * 0.22;
+        const ry = radius * 0.5;
+        ctx.ellipse(0, py, rx, ry, 0, 0, Math.PI * 2);
+        ctx.fillStyle = color + "30";
+        ctx.fill();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius * 0.62, 0, Math.PI * 2);
+      ctx.fillStyle = color + "60";
+      ctx.fill();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 3;
+      ctx.stroke();
+
+      if (mantra) {
+        ctx.fillStyle = "#fff";
+        ctx.font = `bold ${Math.floor(radius * 0.55)}px serif`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(mantra, cx, cy);
+      }
+    }
+
+    async function generateChakraCanvasCard(data) {
+      const S = {
+        bgTop: "#0a0614", bgMid: "#150a2e", bgBot: "#05020a",
+        accent: "#c77dff", accentSoft: "rgba(199, 125, 255, 0.35)",
+        accentDeep: "#ffd700", textPrimary: "#f0e6ff",
+        textMuted: "rgba(240, 230, 255, 0.55)",
+        fontHead: "serif", fontMono: "monospace"
+      };
+
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      canvas.width = 1080; canvas.height = 1920;
+
+      const bgGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      bgGrad.addColorStop(0, S.bgTop);
+      bgGrad.addColorStop(0.5, S.bgMid);
+      bgGrad.addColorStop(1, S.bgBot);
+      ctx.fillStyle = bgGrad; ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.fillStyle = "rgba(240, 230, 255, 0.06)";
+      for (let i = 0; i < 500; i++) {
+        ctx.fillRect(Math.random() * canvas.width, Math.random() * canvas.height, 1, 1);
+      }
+
+      ctx.strokeStyle = S.accentSoft; ctx.lineWidth = 2;
+      ctx.strokeRect(40, 40, canvas.width - 80, canvas.height - 80);
+      ctx.strokeStyle = S.accent; ctx.lineWidth = 1;
+      ctx.strokeRect(55, 55, canvas.width - 110, canvas.height - 110);
+
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+
+      const d = data.resolved || {};
+      const subType = data.type;
+
+      /* INFO */
+      if (subType === "chakra_info") {
+        ctx.fillStyle = S.accent; ctx.font = `bold 44px ${S.fontHead}`;
+        ctx.fillText("✦ ATMOS CHAKRAS ✦", canvas.width / 2, 110);
+
+        ctx.fillStyle = S.textMuted; ctx.font = `18px ${S.fontMono}`;
+        ctx.fillText(`CHAKRA ${d.number} // ${data.date}`, canvas.width / 2, 155);
+
+        ctx.strokeStyle = S.accentSoft; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(120, 190); ctx.lineTo(canvas.width - 120, 190); ctx.stroke();
+
+        drawLotusLocal(ctx, canvas.width / 2, 460, 180, d.petals, d.colorHex, d.mantra);
+
+        ctx.fillStyle = d.colorHex;
+        ctx.font = `bold 58px ${S.fontHead}`;
+        ctx.fillText(d.name, canvas.width / 2, 720);
+
+        ctx.fillStyle = S.textPrimary;
+        ctx.font = `italic 28px ${S.fontHead}`;
+        ctx.fillText(`${d.nameSanskrit} • ${d.nameBg}`, canvas.width / 2, 770);
+
+        ctx.fillStyle = S.textMuted;
+        ctx.font = `22px ${S.fontMono}`;
+        ctx.fillText(`${d.color} • ${d.element} • ${d.planet}`, canvas.width / 2, 820);
+
+        ctx.fillStyle = S.textPrimary;
+        ctx.font = `italic 26px ${S.fontHead}`;
+        const sLines = chakraWrapTextLocal(ctx, d.summary || "", canvas.width - 200, 4);
+        sLines.forEach((line, i) => {
+          ctx.fillText(line, canvas.width / 2, 900 + i * 38);
+        });
+
+                ctx.fillStyle = S.accent;
+        ctx.font = `bold 22px ${S.fontMono}`;
+        ctx.fillText("АФИРМАЦИЯ", canvas.width / 2, 1100);
+
+        ctx.fillStyle = S.textPrimary;
+        ctx.font = `italic 28px ${S.fontHead}`;
+        const affLines = chakraWrapTextLocal(ctx, `„${d.affirmation || ""}"`, canvas.width - 200, 3);
+        let yPos = 1150;
+        affLines.forEach((line) => {
+          ctx.fillText(line, canvas.width / 2, yPos);
+          yPos += 38;
+        });
+
+        yPos += 30;
+        ctx.fillStyle = S.accent;
+        ctx.font = `bold 22px ${S.fontMono}`;
+        ctx.fillText("МАНТРА", canvas.width / 2, yPos);
+        yPos += 40;
+
+        ctx.fillStyle = S.textPrimary;
+        ctx.font = `bold 36px ${S.fontHead}`;
+        ctx.fillText(`${d.mantra} (${d.mantraDevanagari})`, canvas.width / 2, yPos);
+        yPos += 50;
+
+        ctx.fillStyle = S.accent;
+        ctx.font = `bold 22px ${S.fontMono}`;
+        ctx.fillText("ПОЗИЦИЯ", canvas.width / 2, yPos);
+        yPos += 40;
+
+        ctx.fillStyle = S.textMuted;
+        ctx.font = `22px ${S.fontHead}`;
+        const posLines = chakraWrapTextLocal(ctx, d.position, canvas.width - 200, 3);
+        posLines.forEach(line => {
+          ctx.fillText(line, canvas.width / 2, yPos);
+          yPos += 32;
+        });
+      }
+
+      /* PRACTICE */
+      else if (subType === "chakra_practice") {
+        ctx.fillStyle = S.accent; ctx.font = `bold 42px ${S.fontHead}`;
+        ctx.fillText("✦ ПРАКТИКА ✦", canvas.width / 2, 110);
+
+        ctx.fillStyle = S.textMuted; ctx.font = `20px ${S.fontMono}`;
+        ctx.fillText(data.date, canvas.width / 2, 155);
+
+        ctx.strokeStyle = S.accentSoft; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(120, 190); ctx.lineTo(canvas.width - 120, 190); ctx.stroke();
+
+        ctx.fillStyle = S.accentDeep;
+        ctx.font = `bold 50px ${S.fontHead}`;
+        const titleLines = chakraWrapTextLocal(ctx, d.title || "", canvas.width - 200, 2);
+        titleLines.forEach((line, i) => {
+          ctx.fillText(line, canvas.width / 2, 260 + i * 55);
+        });
+
+        drawLotusLocal(ctx, canvas.width / 2, 520, 120, d.chakra.petals, d.chakra.colorHex, d.chakra.mantra);
+
+        ctx.fillStyle = d.chakra.colorHex;
+        ctx.font = `bold 42px ${S.fontHead}`;
+        ctx.fillText(d.chakra.name, canvas.width / 2, 740);
+
+        ctx.fillStyle = S.textPrimary;
+        ctx.font = `22px ${S.fontMono}`;
+        ctx.fillText(`${d.chakra.nameBg} • ${d.chakra.mantra}`, canvas.width / 2, 785);
+
+        ctx.fillStyle = S.textMuted;
+        ctx.font = `italic 24px ${S.fontHead}`;
+        const descLines = chakraWrapTextLocal(ctx, d.description || "", canvas.width - 200, 4);
+        descLines.forEach((line, i) => {
+          ctx.fillText(line, canvas.width / 2, 860 + i * 34);
+        });
+
+        let yCursor = 1040;
+        const sectionH = 100;
+
+        function section(label, value) {
+          ctx.fillStyle = "rgba(0,0,0,0.3)";
+          ctx.fillRect(140, yCursor - 35, canvas.width - 280, sectionH - 20);
+          ctx.strokeStyle = S.accentSoft; ctx.lineWidth = 1;
+          ctx.strokeRect(140, yCursor - 35, canvas.width - 280, sectionH - 20);
+
+          ctx.fillStyle = S.accent;
+          ctx.font = `bold 20px ${S.fontMono}`;
+          ctx.fillText(label, canvas.width / 2, yCursor);
+
+          ctx.fillStyle = S.textPrimary;
+          ctx.font = `bold 26px ${S.fontHead}`;
+          ctx.fillText(value, canvas.width / 2, yCursor + 38);
+
+          yCursor += sectionH;
+        }
+
+        section("МАНТРА (108x)", `${d.chakra.mantra} (${d.chakra.mantraDevanagari})`);
+        section("КРИСТАЛ", d.crystal || "—");
+        section("МАСЛО", d.oil || "—");
+        section("ЙОГА ПОЗА", d.chakra.yogaPose ? d.chakra.yogaPose.split(",")[0].trim() : "—");
+        section("ПРОДЪЛЖИТЕЛНОСТ", d.duration || "—");
+
+        yCursor += 20;
+        ctx.fillStyle = S.accent;
+        ctx.font = `bold 22px ${S.fontMono}`;
+        ctx.fillText("АФИРМАЦИЯ", canvas.width / 2, yCursor);
+        yCursor += 40;
+
+        ctx.fillStyle = S.textPrimary;
+        ctx.font = `italic 26px ${S.fontHead}`;
+        const affLines = chakraWrapTextLocal(ctx, `„${d.chakra.affirmation || ""}"`, canvas.width - 240, 3);
+        affLines.forEach((line, i) => {
+          ctx.fillText(line, canvas.width / 2, yCursor + i * 34);
+        });
+      }
+
+      /* TODAY */
+      else if (subType === "chakra_today") {
+        ctx.fillStyle = S.accent; ctx.font = `bold 42px ${S.fontHead}`;
+        ctx.fillText("✦ ЧАКРА НА ДЕНЯ ✦", canvas.width / 2, 110);
+
+        ctx.fillStyle = S.textMuted; ctx.font = `20px ${S.fontMono}`;
+        ctx.fillText(`${(d.day || "").toUpperCase()} • ${d.planet} • ${data.date}`, canvas.width / 2, 160);
+
+        ctx.strokeStyle = S.accentSoft; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(120, 195); ctx.lineTo(canvas.width - 120, 195); ctx.stroke();
+
+        drawLotusLocal(ctx, canvas.width / 2, 520, 200, d.chakra.petals, d.chakra.colorHex, d.mantra);
+
+        ctx.fillStyle = d.chakra.colorHex;
+        ctx.font = `bold 62px ${S.fontHead}`;
+        ctx.fillText(d.chakra.name, canvas.width / 2, 800);
+
+        ctx.fillStyle = S.textPrimary;
+        ctx.font = `italic 28px ${S.fontHead}`;
+        ctx.fillText(`${d.chakra.nameSanskrit} • ${d.chakra.nameBg}`, canvas.width / 2, 855);
+
+        ctx.fillStyle = S.textMuted;
+        ctx.font = `22px ${S.fontMono}`;
+        ctx.fillText(`${d.chakra.color} • ${d.chakra.element}`, canvas.width / 2, 905);
+
+        ctx.fillStyle = S.textPrimary;
+        ctx.font = `italic 26px ${S.fontHead}`;
+        const sLines = chakraWrapTextLocal(ctx, d.summary || "", canvas.width - 200, 4);
+        sLines.forEach((line, i) => {
+          ctx.fillText(line, canvas.width / 2, 1000 + i * 38);
+        });
+
+        ctx.fillStyle = S.accent;
+        ctx.font = `bold 22px ${S.fontMono}`;
+        ctx.fillText("МАНТРА", canvas.width / 2, 1200);
+        ctx.fillStyle = S.textPrimary;
+        ctx.font = `bold 52px ${S.fontHead}`;
+        ctx.fillText(`${d.mantra} ${d.mantraDeva}`, canvas.width / 2, 1270);
+
+        ctx.fillStyle = S.accent;
+        ctx.font = `bold 22px ${S.fontMono}`;
+        ctx.fillText("АФИРМАЦИЯ", canvas.width / 2, 1360);
+
+        ctx.fillStyle = S.textPrimary;
+        ctx.font = `italic 26px ${S.fontHead}`;
+        const aLines = chakraWrapTextLocal(ctx, `„${d.affirmation}"`, canvas.width - 200, 3);
+        aLines.forEach((line, i) => {
+          ctx.fillText(line, canvas.width / 2, 1420 + i * 34);
+        });
+      }
+
+      /* PROFILE */
+      else if (subType === "chakra_profile") {
+        ctx.fillStyle = S.accent; ctx.font = `bold 42px ${S.fontHead}`;
+        ctx.fillText("✦ ЛИЧЕН ЧАКРА ПРОФИЛ ✦", canvas.width / 2, 110);
+
+        ctx.fillStyle = S.textMuted; ctx.font = `20px ${S.fontMono}`;
+        ctx.fillText(data.date, canvas.width / 2, 155);
+
+        ctx.fillStyle = S.textPrimary; ctx.font = `bold 38px ${S.fontHead}`;
+        ctx.fillText(d.name, canvas.width / 2, 215);
+
+        ctx.fillStyle = S.textMuted; ctx.font = `22px ${S.fontMono}`;
+        ctx.fillText(d.date, canvas.width / 2, 260);
+
+        ctx.strokeStyle = S.accentSoft; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(120, 295); ctx.lineTo(canvas.width - 120, 295); ctx.stroke();
+
+        ctx.fillStyle = S.accent;
+        ctx.font = `bold 20px ${S.fontMono}`;
+        ctx.fillText("ОСНОВНА ЧАКРА", canvas.width / 2, 340);
+
+        drawLotusLocal(ctx, canvas.width / 2, 540, 140, d.main.petals, d.main.colorHex, d.main.mantra);
+
+        ctx.fillStyle = d.main.colorHex;
+        ctx.font = `bold 48px ${S.fontHead}`;
+        ctx.fillText(d.main.name, canvas.width / 2, 730);
+
+        ctx.fillStyle = S.textPrimary;
+        ctx.font = `italic 24px ${S.fontHead}`;
+        ctx.fillText(`${d.main.nameSanskrit} • ${d.main.nameBg}`, canvas.width / 2, 775);
+
+        ctx.fillStyle = S.textMuted;
+        ctx.font = `20px ${S.fontMono}`;
+        ctx.fillText(`LIFE PATH: ${d.lifePath}`, canvas.width / 2, 815);
+
+        let yCursor = 900;
+
+        ctx.fillStyle = S.accent;
+        ctx.font = `bold 20px ${S.fontMono}`;
+        ctx.fillText("ВТОРОСТЕПЕННА ЧАКРА", canvas.width / 2, yCursor);
+        yCursor += 45;
+
+        ctx.fillStyle = d.second.colorHex;
+        ctx.font = `bold 38px ${S.fontHead}`;
+        ctx.fillText(d.second.name, canvas.width / 2, yCursor);
+        yCursor += 40;
+
+        ctx.fillStyle = S.textMuted;
+        ctx.font = `20px ${S.fontMono}`;
+        ctx.fillText(`EXPRESSION: ${d.expression}`, canvas.width / 2, yCursor);
+        yCursor += 80;
+
+        ctx.fillStyle = S.accent;
+        ctx.font = `bold 20px ${S.fontMono}`;
+        ctx.fillText("ЗОНА ЗА РАСТЕЖ", canvas.width / 2, yCursor);
+        yCursor += 45;
+
+        ctx.fillStyle = d.growth.colorHex;
+        ctx.font = `bold 38px ${S.fontHead}`;
+        ctx.fillText(d.growth.name, canvas.width / 2, yCursor);
+        yCursor += 40;
+
+        ctx.fillStyle = S.textMuted;
+        ctx.font = `20px ${S.fontMono}`;
+        ctx.fillText(`SOUL URGE: ${d.soulUrge}`, canvas.width / 2, yCursor);
+        yCursor += 80;
+
+        ctx.fillStyle = S.accent;
+        ctx.font = `bold 22px ${S.fontMono}`;
+        ctx.fillText("АФИРМАЦИЯ", canvas.width / 2, yCursor);
+        yCursor += 45;
+
+        ctx.fillStyle = S.textPrimary;
+        ctx.font = `italic 26px ${S.fontHead}`;
+        const affLines = chakraWrapTextLocal(ctx, `„${d.affirmation}"`, canvas.width - 240, 3);
+        affLines.forEach((line, i) => {
+          ctx.fillText(line, canvas.width / 2, yCursor + i * 34);
+        });
+      }
+
+      ctx.strokeStyle = S.accentSoft; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(120, canvas.height - 130); ctx.lineTo(canvas.width - 120, canvas.height - 130); ctx.stroke();
+
+      ctx.fillStyle = S.textMuted;
+      ctx.font = `18px ${S.fontMono}`;
+      ctx.fillText("ATMOS CHAKRAS ENGINE", canvas.width / 2, canvas.height - 90);
+
+      ctx.fillStyle = S.accent;
+      ctx.font = `bold 22px ${S.fontHead}`;
+      ctx.fillText("atoms.free.bg", canvas.width / 2, canvas.height - 55);
+
+      return canvas.toDataURL("image/png");
+    }
+
+        // РЕНДЕР 4: ATMOS TAROT READING (динамичен брой карти: 3 / 4 / 5, 1080x1920)
+    function tarotReadingWrapText(ctx, text, maxWidth, maxLines) {
+      const words = (text || "").split(" ");
+      const lines = [];
+      let cur = "";
+      for (let i = 0; i < words.length; i++) {
+        const test = cur + words[i] + " ";
+        if (ctx.measureText(test).width > maxWidth && i > 0) {
+          lines.push(cur.trim());
+          cur = words[i] + " ";
+          if (maxLines && lines.length >= maxLines) {
+            if (cur.trim()) lines[lines.length - 1] += "...";
+            return lines;
+          }
+        } else {
+          cur = test;
+        }
+      }
+      if (cur.trim()) lines.push(cur.trim());
+      return lines;
+    }
+
+    function tarotReadingGetLayout(count) {
+      const usable = 1080 - 200;
+      let gap, cardW;
+      if (count <= 3) { gap = 30; }
+      else if (count === 4) { gap = 22; }
+      else { gap = 16; }
+
+      cardW = Math.floor((usable - gap * (count - 1)) / count);
+      if (count <= 3) cardW = Math.min(cardW, 260);
+
+      const cardH = Math.floor(cardW * 1.5);
+      const totalW = count * cardW + (count - 1) * gap;
+      const startX = (1080 - totalW) / 2;
+      return { cardW, cardH, gap, startX, cardY: 500 };
+    }
+
+    async function generateTarotReadingCanvasCard(data) {
+      const S = {
+        bgTop: "#0a0514", bgMid: "#1a0b2e", bgBot: "#05020a",
+        accent: "#d4af37", accentSoft: "rgba(212, 175, 55, 0.35)",
+        textPrimary: "#f5e6c8", textMuted: "rgba(245, 230, 200, 0.55)",
+        fontHead: "serif", fontMono: "monospace"
+      };
+
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      canvas.width = 1080;
+      canvas.height = 1920;
+
+      /* ФОН */
+      const bgGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      bgGrad.addColorStop(0, S.bgTop);
+      bgGrad.addColorStop(0.5, S.bgMid);
+      bgGrad.addColorStop(1, S.bgBot);
+      ctx.fillStyle = bgGrad;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      /* ЗВЕЗДИ */
+      ctx.fillStyle = "rgba(255, 255, 255, 0.08)";
+      for (let i = 0; i < 300; i++) {
+        ctx.fillRect(Math.random() * canvas.width, Math.random() * canvas.height, 1, 1);
+      }
+
+      /* РАМКИ */
+      ctx.strokeStyle = S.accentSoft; ctx.lineWidth = 2;
+      ctx.strokeRect(40, 40, canvas.width - 80, canvas.height - 80);
+      ctx.strokeStyle = S.accent; ctx.lineWidth = 1;
+      ctx.strokeRect(55, 55, canvas.width - 110, canvas.height - 110);
+
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+
+      /* ХЕДЪР */
+      ctx.fillStyle = S.accent;
+      ctx.font = `bold 40px ${S.fontHead}`;
+      ctx.fillText("✦ ATMOS TAROT READING ✦", canvas.width / 2, 110);
+
+      ctx.fillStyle = S.textMuted;
+      ctx.font = `18px ${S.fontMono}`;
+      ctx.fillText(`${data.spreadName || 'SPREAD'} // ${data.date || ''}`, canvas.width / 2, 155);
+
+      ctx.strokeStyle = S.accentSoft; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(120, 190); ctx.lineTo(canvas.width - 120, 190); ctx.stroke();
+
+      /* ВЪПРОС */
+      ctx.fillStyle = S.accent;
+      ctx.font = `bold 22px ${S.fontMono}`;
+      ctx.fillText("ВЪПРОС", canvas.width / 2, 235);
+
+      ctx.fillStyle = S.textPrimary;
+      ctx.font = `bold 32px ${S.fontHead}`;
+      const qLines = tarotReadingWrapText(ctx, data.question, canvas.width - 200, 3);
+      qLines.forEach((line, i) => {
+        const prefix = i === 0 ? '"' : '';
+        const suffix = i === qLines.length - 1 ? '"' : '';
+        ctx.fillText(prefix + line + suffix, canvas.width / 2, 285 + i * 42);
+      });
+
+      /* РАЗКЛАД */
+      const cards = data.cards || [];
+      const layout = tarotReadingGetLayout(cards.length);
+      const cardY = layout.cardY;
+
+      for (let i = 0; i < cards.length; i++) {
+        const c = cards[i];
+        const cx = layout.startX + i * (layout.cardW + layout.gap);
+
+        ctx.fillStyle = "rgba(0,0,0,0.4)";
+        ctx.fillRect(cx - 4, cardY - 4, layout.cardW + 8, layout.cardH + 8);
+        ctx.strokeStyle = S.accent; ctx.lineWidth = 2;
+        ctx.strokeRect(cx - 4, cardY - 4, layout.cardW + 8, layout.cardH + 8);
+
+        let drawn = false;
+        if (c.imageUrl) {
+          try {
+            const img = await new Promise((resolve, reject) => {
+              const ii = new Image();
+              ii.crossOrigin = "anonymous";
+              ii.onload = () => resolve(ii);
+              ii.onerror = () => reject(new Error("load-failed"));
+              ii.src = c.imageUrl;
+            });
+
+            const imgRatio = img.width / img.height;
+            const boxRatio = layout.cardW / layout.cardH;
+            let dw, dh;
+            if (imgRatio > boxRatio) { dw = layout.cardW; dh = layout.cardW / imgRatio; }
+            else { dh = layout.cardH; dw = layout.cardH * imgRatio; }
+            const dx = cx + (layout.cardW - dw) / 2;
+            const dy = cardY + (layout.cardH - dh) / 2;
+
+            if (c.isReversed) {
+              ctx.save();
+              ctx.translate(dx + dw / 2, dy + dh / 2);
+              ctx.rotate(Math.PI);
+              ctx.drawImage(img, -dw / 2, -dh / 2, dw, dh);
+              ctx.restore();
+            } else {
+              ctx.drawImage(img, dx, dy, dw, dh);
+            }
+            drawn = true;
+          } catch (e) {}
+        }
+
+        if (!drawn) {
+          ctx.fillStyle = S.accent;
+          ctx.font = `bold ${Math.floor(layout.cardW * 0.6)}px serif`;
+          ctx.fillText(c.symbol || "✦", cx + layout.cardW / 2, cardY + layout.cardH / 2);
+        }
+      }
+
+      /* ПОЗИЦИИ / ИМЕНА / ЗНАЧЕНИЯ */
+      let yCursor = cardY + layout.cardH + 60;
+      const posFontSize = cards.length >= 5 ? 20 : 24;
+      const nameFontSize = cards.length >= 5 ? 22 : 26;
+      const meaningFontSize = cards.length >= 5 ? 22 : 24;
+
+      for (let i = 0; i < cards.length; i++) {
+        const c = cards[i];
+        const pos = (data.positions && data.positions[i]) || `КАРТА ${i + 1}`;
+        const dir = c.isReversed ? "обърната" : "права";
+
+        ctx.fillStyle = S.accent;
+        ctx.font = `bold ${posFontSize}px ${S.fontMono}`;
+        ctx.fillText(`[${pos}]`, canvas.width / 2, yCursor);
+        yCursor += posFontSize + 10;
+
+        ctx.fillStyle = S.textPrimary;
+        ctx.font = `bold ${nameFontSize}px ${S.fontHead}`;
+        ctx.fillText(`${c.name} (${dir})`, canvas.width / 2, yCursor);
+        yCursor += nameFontSize + 10;
+
+        ctx.fillStyle = S.textMuted;
+        ctx.font = `${meaningFontSize}px ${S.fontHead}`;
+        const mLines = tarotReadingWrapText(ctx, c.meaning, canvas.width - 260, 2);
+        mLines.forEach(line => {
+          ctx.fillText(line, canvas.width / 2, yCursor);
+          yCursor += meaningFontSize + 8;
+        });
+
+        yCursor += 12;
+      }
+
+      /* ОБОБЩЕНИЕ */
+      yCursor += 6;
+      ctx.strokeStyle = S.accentSoft; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(120, yCursor); ctx.lineTo(canvas.width - 120, yCursor); ctx.stroke();
+      yCursor += 46;
+
+      ctx.fillStyle = S.accent;
+      ctx.font = `bold 24px ${S.fontMono}`;
+      ctx.fillText("[ОБОБЩЕНИЕ]", canvas.width / 2, yCursor);
+      yCursor += 40;
+
+      ctx.fillStyle = S.textPrimary;
+      ctx.font = `italic 24px ${S.fontHead}`;
+      const sLines = tarotReadingWrapText(ctx, data.summary || "", canvas.width - 200, 4);
+      sLines.forEach(line => {
+        ctx.fillText(line, canvas.width / 2, yCursor);
+        yCursor += 34;
+      });
+
+      /* FOOTER */
+      ctx.strokeStyle = S.accentSoft; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(120, canvas.height - 130); ctx.lineTo(canvas.width - 120, canvas.height - 130); ctx.stroke();
+
+      ctx.fillStyle = S.textMuted;
+      ctx.font = `18px ${S.fontMono}`;
+      ctx.fillText(`ATMOS TAROT ENGINE // ${data.spreadName || 'SPREAD'}`, canvas.width / 2, canvas.height - 90);
+
+      ctx.fillStyle = S.accent;
+      ctx.font = `bold 22px ${S.fontHead}`;
+      ctx.fillText("atoms.free.bg", canvas.width / 2, canvas.height - 55);
+
+      return canvas.toDataURL("image/png");
+    }
+
+        // РЕНДЕР 12: ATMOS MANTRA
+    function mantraWrapTextLocal(ctx, text, maxWidth, maxLines) {
+      const words = (text || "").split(" ");
+      const lines = [];
+      let cur = "";
+      for (let i = 0; i < words.length; i++) {
+        const test = cur + words[i] + " ";
+        if (ctx.measureText(test).width > maxWidth && i > 0) {
+          lines.push(cur.trim());
+          cur = words[i] + " ";
+          if (maxLines && lines.length >= maxLines) {
+            if (cur.trim()) lines[lines.length - 1] += "...";
+            return lines;
+          }
+        } else {
+          cur = test;
+        }
+      }
+      if (cur.trim()) lines.push(cur.trim());
+      return lines;
+    }
+
+    async function generateMantraCanvasCard(data) {
+      const S = {
+        bgTop: "#1a0d02", bgMid: "#2d1505", bgBot: "#0a0400",
+        accent: "#f4a261", accentSoft: "rgba(244, 162, 97, 0.35)",
+        accentDeep: "#ffd700", textPrimary: "#fff3e0",
+        textMuted: "rgba(255, 243, 224, 0.55)",
+        fontHead: "serif", fontMono: "monospace"
+      };
+
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      canvas.width = 1080; canvas.height = 1920;
+
+      const bgGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      bgGrad.addColorStop(0, S.bgTop);
+      bgGrad.addColorStop(0.5, S.bgMid);
+      bgGrad.addColorStop(1, S.bgBot);
+      ctx.fillStyle = bgGrad; ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.fillStyle = "rgba(255, 243, 224, 0.08)";
+      for (let i = 0; i < 400; i++) {
+        ctx.fillRect(Math.random() * canvas.width, Math.random() * canvas.height, 1, 1);
+      }
+
+      const cx = canvas.width / 2;
+      const cy = 700;
+      const radGrad = ctx.createRadialGradient(cx, cy, 50, cx, cy, 400);
+      radGrad.addColorStop(0, "rgba(244, 162, 97, 0.30)");
+      radGrad.addColorStop(0.5, "rgba(244, 162, 97, 0.10)");
+      radGrad.addColorStop(1, "rgba(244, 162, 97, 0)");
+      ctx.fillStyle = radGrad;
+      ctx.fillRect(cx - 400, cy - 400, 800, 800);
+
+      ctx.strokeStyle = S.accentSoft; ctx.lineWidth = 2;
+      ctx.strokeRect(40, 40, canvas.width - 80, canvas.height - 80);
+      ctx.strokeStyle = S.accent; ctx.lineWidth = 1;
+      ctx.strokeRect(55, 55, canvas.width - 110, canvas.height - 110);
+
+      ctx.fillStyle = S.accentDeep;
+      ctx.font = `bold 36px serif`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("ॐ", 95, 95);
+      ctx.fillText("ॐ", canvas.width - 95, 95);
+      ctx.fillText("ॐ", 95, canvas.height - 95);
+      ctx.fillText("ॐ", canvas.width - 95, canvas.height - 95);
+
+      ctx.fillStyle = S.accent;
+      ctx.font = `bold 44px ${S.fontHead}`;
+      ctx.fillText("✦ ATMOS MANTRAS ✦", canvas.width / 2, 120);
+
+      const d = data.resolved || {};
+
+      ctx.fillStyle = S.textMuted;
+      ctx.font = `18px ${S.fontMono}`;
+      ctx.fillText(`${(d.tradition || '').toUpperCase()} // ${data.date || ''}`, canvas.width / 2, 165);
+
+      ctx.strokeStyle = S.accentSoft; ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(120, 195);
+      ctx.lineTo(canvas.width - 120, 195);
+      ctx.stroke();
+
+      /* САНСКРИТ */
+      ctx.fillStyle = S.accentDeep;
+      ctx.font = `bold 90px serif`;
+      const sLines = mantraWrapTextLocal(ctx, d.sanskrit || "", canvas.width - 200, 3);
+      sLines.forEach((line, i) => {
+        ctx.fillText(line, canvas.width / 2, 340 + i * 100);
+      });
+
+      /* ТРАНСЛИТЕРАЦИЯ */
+      ctx.fillStyle = S.textPrimary;
+      ctx.font = `italic 32px ${S.fontHead}`;
+      const tLines = mantraWrapTextLocal(ctx, d.transliteration || "", canvas.width - 200, 3);
+      tLines.forEach((line, i) => {
+        ctx.fillText(line, canvas.width / 2, 680 + i * 40);
+      });
+
+      /* ПРЕВОД */
+      ctx.fillStyle = S.accent;
+      ctx.font = `bold 26px ${S.fontMono}`;
+      ctx.fillText("ПРЕВОД", canvas.width / 2, 900);
+
+      ctx.fillStyle = S.textPrimary;
+      ctx.font = `italic 28px ${S.fontHead}`;
+      const tbgLines = mantraWrapTextLocal(ctx, `„${d.translation || ""}"`, canvas.width - 200, 4);
+      tbgLines.forEach((line, i) => {
+        ctx.fillText(line, canvas.width / 2, 950 + i * 38);
+      });
+
+      ctx.strokeStyle = S.accentSoft; ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(200, 1160);
+      ctx.lineTo(canvas.width - 200, 1160);
+      ctx.stroke();
+
+      /* SUMMARY */
+      ctx.fillStyle = S.textPrimary;
+      ctx.font = `26px ${S.fontHead}`;
+      const summLines = mantraWrapTextLocal(ctx, d.summary || "", canvas.width - 200, 5);
+      summLines.forEach((line, i) => {
+        ctx.fillText(line, canvas.width / 2, 1230 + i * 40);
+      });
+
+      /* ПОЛЗИ */
+      ctx.fillStyle = S.accent;
+      ctx.font = `bold 22px ${S.fontMono}`;
+      ctx.fillText("✨ ПОЛЗИ", canvas.width / 2, 1500);
+
+      ctx.fillStyle = S.textPrimary;
+      ctx.font = `italic 24px ${S.fontHead}`;
+      ctx.fillText(d.benefit || "", canvas.width / 2, 1550);
+
+      ctx.fillStyle = S.textMuted;
+      ctx.font = `20px ${S.fontMono}`;
+      ctx.fillText(`🔔 ${d.repetitions || ""}`, canvas.width / 2, 1620);
+
+      ctx.strokeStyle = S.accentSoft; ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(120, canvas.height - 130);
+      ctx.lineTo(canvas.width - 120, canvas.height - 130);
+      ctx.stroke();
+
+      ctx.fillStyle = S.textMuted;
+      ctx.font = `18px ${S.fontMono}`;
+      ctx.fillText("ATMOS MANTRAS ENGINE // SACRED SOUND", canvas.width / 2, canvas.height - 90);
+
+      ctx.fillStyle = S.accent;
+      ctx.font = `bold 22px ${S.fontHead}`;
+      ctx.fillText("atoms.free.bg", canvas.width / 2, canvas.height - 55);
+
+      return canvas.toDataURL("image/png");
+    }
+
+        // РЕНДЕР 13: ATMOS SIGIL (персонален)
+    function sigilWrapTextLocal(ctx, text, maxWidth, maxLines) {
+      const words = (text || "").split(" ");
+      const lines = [];
+      let cur = "";
+      for (let i = 0; i < words.length; i++) {
+        const test = cur + words[i] + " ";
+        if (ctx.measureText(test).width > maxWidth && i > 0) {
+          lines.push(cur.trim());
+          cur = words[i] + " ";
+          if (maxLines && lines.length >= maxLines) {
+            if (cur.trim()) lines[lines.length - 1] += "...";
+            return lines;
+          }
+        } else {
+          cur = test;
+        }
+      }
+      if (cur.trim()) lines.push(cur.trim());
+      return lines;
+    }
+
+    const SIGIL_CYRILLIC_LOCAL = {
+      'А':1,'Б':2,'В':3,'Г':4,'Д':5,'Е':6,'Ж':7,'З':8,'И':9,'Й':10,
+      'К':11,'Л':12,'М':13,'Н':14,'О':15,'П':16,'Р':17,'С':18,'Т':19,'У':20,
+      'Ф':21,'Х':22,'Ц':23,'Ч':24,'Ш':25,'Щ':26,'Ъ':27,'Ь':28,'Ю':29,'Я':30
+    };
+
+    const SIGIL_LATIN_LOCAL = {
+      'A':1,'B':2,'C':3,'D':4,'E':5,'F':6,'G':7,'H':8,'I':9,'J':10,
+      'K':11,'L':12,'M':13,'N':14,'O':15,'P':16,'Q':17,'R':18,'S':19,'T':20,
+      'U':21,'V':22,'W':23,'X':24,'Y':25,'Z':26
+    };
+
+    function sigilBuildPointsLocal(numbers, cx, cy, radius) {
+      const points = [];
+      const isCyrillic = Math.max(...numbers) > 26;
+      for (let i = 0; i < numbers.length; i++) {
+        const n = numbers[i];
+        const maxN = isCyrillic ? 30 : 26;
+        const angle = (n * 2 * Math.PI) / maxN;
+        const length = radius * (0.35 + (n / maxN) * 0.6);
+        const x = cx + length * Math.cos(angle);
+        const y = cy + length * Math.sin(angle);
+        points.push({ x, y });
+      }
+      return points;
+    }
+
+    function sigilDrawGeometryLocal(ctx, points, cx, cy, isReverse) {
+      if (points.length === 0) return;
+      const S = { accent: "#d4af37", accentDeep: "#ffd700" };
+
+      ctx.strokeStyle = S.accent;
+      ctx.lineWidth = 4;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+
+      ctx.beginPath();
+      ctx.moveTo(points[0].x, points[0].y);
+      for (let i = 1; i < points.length; i++) {
+        ctx.lineTo(points[i].x, points[i].y);
+      }
+      ctx.stroke();
+
+      ctx.strokeStyle = "rgba(212, 175, 55, 0.4)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(points[points.length - 1].x, points[points.length - 1].y);
+      ctx.lineTo(cx, cy);
+      ctx.stroke();
+
+      ctx.fillStyle = S.accentDeep;
+      for (const p of points) {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      ctx.fillStyle = "#fff8dc";
+      ctx.beginPath();
+      ctx.arc(cx, cy, 7, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = S.accent;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(cx, cy, 12, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    async function generateSigilCanvasCard(data) {
+      const S = {
+        bgTop: "#0a0a0a", bgMid: "#141414", bgBot: "#050505",
+        accent: "#d4af37", accentSoft: "rgba(212, 175, 55, 0.35)",
+        accentDeep: "#ffd700", textPrimary: "#f5e6c8",
+        textMuted: "rgba(245, 230, 200, 0.55)",
+        fontHead: "serif", fontMono: "monospace"
+      };
+
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      canvas.width = 1080; canvas.height = 1920;
+
+      const bgGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      bgGrad.addColorStop(0, S.bgTop);
+      bgGrad.addColorStop(0.5, S.bgMid);
+      bgGrad.addColorStop(1, S.bgBot);
+      ctx.fillStyle = bgGrad; ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.fillStyle = "rgba(245, 230, 200, 0.08)";
+      for (let i = 0; i < 400; i++) {
+        ctx.fillRect(Math.random() * canvas.width, Math.random() * canvas.height, 1, 1);
+      }
+
+      ctx.strokeStyle = S.accentSoft; ctx.lineWidth = 2;
+      ctx.strokeRect(40, 40, canvas.width - 80, canvas.height - 80);
+      ctx.strokeStyle = S.accent; ctx.lineWidth = 1;
+      ctx.strokeRect(55, 55, canvas.width - 110, canvas.height - 110);
+
+      ctx.fillStyle = S.accent;
+      ctx.font = `bold 36px serif`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("✦", 95, 95);
+      ctx.fillText("✦", canvas.width - 95, 95);
+      ctx.fillText("✦", 95, canvas.height - 95);
+      ctx.fillText("✦", canvas.width - 95, canvas.height - 95);
+
+      ctx.fillStyle = S.accent;
+      ctx.font = `bold 40px ${S.fontHead}`;
+      ctx.fillText("✦ ATMOS SIGIL ✦", canvas.width / 2, 120);
+
+      ctx.fillStyle = S.textMuted;
+      ctx.font = `18px ${S.fontMono}`;
+      ctx.fillText(data.resolved.isReverse ? "REVERSE SIGIL" : "PERSONAL SIGIL", canvas.width / 2, 165);
+
+      const d = data.resolved;
+      const intentText = "◄◄◄ " + d.intention.toUpperCase() + " ►►►";
+      ctx.fillStyle = S.accentDeep;
+      ctx.font = `bold 28px ${S.fontHead}`;
+      const intentLines = sigilWrapTextLocal(ctx, intentText, canvas.width - 200, 3);
+      const intentStartY = 240;
+      intentLines.forEach((line, i) => {
+        ctx.fillText(line, canvas.width / 2, intentStartY + i * 38);
+      });
+
+      const cx = canvas.width / 2;
+      const cy = 960;
+      const outerRadius = 400;
+      const innerRadius = 360;
+
+      ctx.strokeStyle = S.accent;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(cx, cy, outerRadius, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.strokeStyle = S.accentSoft;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(cx, cy, innerRadius, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.fillStyle = S.accent;
+      for (let i = 0; i < 12; i++) {
+        const angle = (i / 12) * Math.PI * 2;
+        const px = cx + outerRadius * Math.cos(angle);
+        const py = cy + outerRadius * Math.sin(angle);
+        ctx.beginPath();
+        ctx.arc(px, py, 3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      const points = sigilBuildPointsLocal(d.numbers, cx, cy, innerRadius * 0.85);
+      sigilDrawGeometryLocal(ctx, points, cx, cy, d.isReverse);
+
+      ctx.fillStyle = S.textMuted;
+      ctx.font = `18px ${S.fontMono}`;
+      ctx.fillText("✦ ATMOS SIGIL ENGINE ✦", canvas.width / 2, 1520);
+
+      ctx.fillStyle = S.accent;
+      ctx.font = `bold 20px ${S.fontMono}`;
+      ctx.fillText(`${data.date} // ${d.id}`, canvas.width / 2, 1560);
+
+      ctx.strokeStyle = S.accentSoft; ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(120, canvas.height - 130);
+      ctx.lineTo(canvas.width - 120, canvas.height - 130);
+      ctx.stroke();
+
+      ctx.fillStyle = S.textMuted;
+      ctx.font = `18px ${S.fontMono}`;
+      ctx.fillText("GEOMETRIC SIGIL GENERATOR", canvas.width / 2, canvas.height - 90);
+
+      ctx.fillStyle = S.accent;
+      ctx.font = `bold 22px ${S.fontHead}`;
+      ctx.fillText("atoms.free.bg", canvas.width / 2, canvas.height - 55);
+
+      return canvas.toDataURL("image/png");
+    }
+
+    // РЕНДЕР 14: ATMOS GOETIA (червено-черен върху пергамент)
+    async function generateGoetiaCanvasCard(data) {
+      const G = {
+        bg: "#f5f0e6", bgDark: "#e8dfc8",
+        textDark: "#1a1a1a", textRed: "#8b0000",
+        accent: "#d4af37", border: "#8b0000",
+        fontHead: "serif", fontMono: "monospace"
+      };
+
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      canvas.width = 1080; canvas.height = 1920;
+
+      const bgGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      bgGrad.addColorStop(0, G.bg);
+      bgGrad.addColorStop(1, G.bgDark);
+      ctx.fillStyle = bgGrad;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.fillStyle = "rgba(139, 0, 0, 0.03)";
+      for (let i = 0; i < 800; i++) {
+        ctx.fillRect(Math.random() * canvas.width, Math.random() * canvas.height, 1, 1);
+      }
+
+      ctx.strokeStyle = G.border;
+      ctx.lineWidth = 3;
+      ctx.strokeRect(40, 40, canvas.width - 80, canvas.height - 80);
+
+      ctx.strokeStyle = G.accent;
+      ctx.lineWidth = 1;
+      ctx.strokeRect(55, 55, canvas.width - 110, canvas.height - 110);
+
+      ctx.fillStyle = G.border;
+      ctx.font = `bold 36px serif`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("✠", 95, 95);
+      ctx.fillText("✠", canvas.width - 95, 95);
+      ctx.fillText("✠", 95, canvas.height - 95);
+      ctx.fillText("✠", canvas.width - 95, canvas.height - 95);
+
+      ctx.fillStyle = G.border;
+      ctx.font = `bold 44px ${G.fontHead}`;
+      ctx.fillText("✦ ATMOS GOETIA ✦", canvas.width / 2, 120);
+
+      const d = data.resolved;
+
+      ctx.fillStyle = G.textDark;
+      ctx.font = `18px ${G.fontMono}`;
+      ctx.fillText(`ARS GOETIA // №${d.number} // ${data.date}`, canvas.width / 2, 165);
+
+      ctx.strokeStyle = G.border;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(120, 195);
+      ctx.lineTo(canvas.width - 120, 195);
+      ctx.stroke();
+
+      const sigilImgY = 260;
+      const sigilImgSize = 500;
+
+      try {
+        const img = await new Promise((resolve, reject) => {
+          const i = new Image();
+          i.crossOrigin = "anonymous";
+          i.onload = () => resolve(i);
+          i.onerror = () => reject(new Error("load-failed"));
+          i.src = d.sigilUrl;
+        });
+
+        ctx.fillStyle = "rgba(139, 0, 0, 0.05)";
+        ctx.fillRect(canvas.width / 2 - sigilImgSize / 2 - 10, sigilImgY - 10, sigilImgSize + 20, sigilImgSize + 20);
+        ctx.strokeStyle = G.border;
+        ctx.lineWidth = 2;
+        ctx.strokeRect(canvas.width / 2 - sigilImgSize / 2 - 10, sigilImgY - 10, sigilImgSize + 20, sigilImgSize + 20);
+
+        const imgRatio = img.width / img.height;
+        let dw, dh;
+        if (imgRatio > 1) {
+          dw = sigilImgSize;
+          dh = sigilImgSize / imgRatio;
+        } else {
+          dh = sigilImgSize;
+          dw = sigilImgSize * imgRatio;
+        }
+        const dx = canvas.width / 2 - dw / 2;
+        const dy = sigilImgY + (sigilImgSize - dh) / 2;
+        ctx.drawImage(img, dx, dy, dw, dh);
+      } catch (e) {
+        ctx.fillStyle = G.border;
+        ctx.font = `bold 24px ${G.fontMono}`;
+        ctx.fillText("[ сигналът не се зареди ]", canvas.width / 2, sigilImgY + sigilImgSize / 2);
+      }
+
+      const nameY = sigilImgY + sigilImgSize + 80;
+      ctx.fillStyle = G.textDark;
+      ctx.font = `bold 68px ${G.fontHead}`;
+      ctx.fillText(d.name, canvas.width / 2, nameY);
+
+      ctx.fillStyle = G.textRed;
+      ctx.font = `bold 26px ${G.fontMono}`;
+      ctx.fillText(`${d.rank.toUpperCase()} • ${d.legions} LEGIONS`, canvas.width / 2, nameY + 55);
+
+      ctx.fillStyle = G.border;
+      ctx.font = `bold 20px ${G.fontMono}`;
+      ctx.fillText("ФОРМА", canvas.width / 2, nameY + 115);
+
+      ctx.fillStyle = G.textDark;
+      ctx.font = `italic 24px ${G.fontHead}`;
+      const appLines = sigilWrapTextLocal(ctx, d.appearance, canvas.width - 200, 3);
+      appLines.forEach((line, i) => {
+        ctx.fillText(line, canvas.width / 2, nameY + 155 + i * 32);
+      });
+
+      const powersY = nameY + 155 + appLines.length * 32 + 40;
+      ctx.fillStyle = G.border;
+      ctx.font = `bold 20px ${G.fontMono}`;
+      ctx.fillText("СИЛИ", canvas.width / 2, powersY);
+
+      ctx.fillStyle = G.textDark;
+      ctx.font = `22px ${G.fontHead}`;
+      const powerLines = sigilWrapTextLocal(ctx, d.powers, canvas.width - 200, 4);
+      powerLines.forEach((line, i) => {
+        ctx.fillText(line, canvas.width / 2, powersY + 40 + i * 30);
+      });
+
+      ctx.strokeStyle = G.border;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(120, canvas.height - 130);
+      ctx.lineTo(canvas.width - 120, canvas.height - 130);
+      ctx.stroke();
+
+      ctx.fillStyle = G.textRed;
+      ctx.font = `18px ${G.fontMono}`;
+      ctx.fillText("ATMOS GOETIA ENGINE // ARS GOETIA", canvas.width / 2, canvas.height - 90);
+
+      ctx.fillStyle = G.border;
+      ctx.font = `bold 22px ${G.fontHead}`;
+      ctx.fillText("atoms.free.bg", canvas.width / 2, canvas.height - 55);
+
+      return canvas.toDataURL("image/png");
+    }
+    
+        // =========================================================
+    // РЕНДЕР 15: ATMOS LENORMAND — SINGLE CARD
+    // =========================================================
+    function lenormandWrapTextLocal(ctx, text, maxWidth, maxLines) {
+      const words = (text || "").split(" ");
+      const lines = [];
+      let cur = "";
+      for (let i = 0; i < words.length; i++) {
+        const test = cur + words[i] + " ";
+        if (ctx.measureText(test).width > maxWidth && i > 0) {
+          lines.push(cur.trim());
+          cur = words[i] + " ";
+          if (maxLines && lines.length >= maxLines) {
+            if (cur.trim()) lines[lines.length - 1] += "...";
+            return lines;
+          }
+        } else {
+          cur = test;
+        }
+      }
+      if (cur.trim()) lines.push(cur.trim());
+      return lines;
+    }
+
+    const LENORMAND_CATEGORY_COLORS_LOCAL = {
+      light:   "#4a90d9",
+      neutral: "#d4af37",
+      shadow:  "#8b2020"
+    };
+
+    async function generateLenormandSingleCanvasCard(data) {
+      const S = {
+        bgTop: "#0a1020", bgMid: "#1a2540", bgBot: "#050810",
+        accent: "#d4af37", accentSoft: "rgba(212, 175, 55, 0.35)",
+        accentDeep: "#ffd700", accentBlue: "#4a90d9",
+        textPrimary: "#e6eef8", textMuted: "rgba(230, 238, 248, 0.55)",
+        fontHead: "serif", fontMono: "monospace"
+      };
+
+      const d = data.resolved || {};
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      canvas.width = 1080; canvas.height = 1920;
+
+      const bgGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      bgGrad.addColorStop(0, S.bgTop);
+      bgGrad.addColorStop(0.5, S.bgMid);
+      bgGrad.addColorStop(1, S.bgBot);
+      ctx.fillStyle = bgGrad; ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.fillStyle = "rgba(230, 238, 248, 0.08)";
+      for (let i = 0; i < 400; i++) {
+        ctx.fillRect(Math.random() * canvas.width, Math.random() * canvas.height, 1, 1);
+      }
+
+      ctx.strokeStyle = S.accentSoft; ctx.lineWidth = 2;
+      ctx.strokeRect(40, 40, canvas.width - 80, canvas.height - 80);
+      ctx.strokeStyle = S.accent; ctx.lineWidth = 1;
+      ctx.strokeRect(55, 55, canvas.width - 110, canvas.height - 110);
+
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+
+      ctx.fillStyle = S.accent;
+      ctx.font = `bold 36px serif`;
+      ctx.fillText("✦", 95, 95);
+      ctx.fillText("✦", canvas.width - 95, 95);
+      ctx.fillText("✦", 95, canvas.height - 95);
+      ctx.fillText("✦", canvas.width - 95, canvas.height - 95);
+
+      ctx.fillStyle = S.accent;
+      ctx.font = `bold 42px ${S.fontHead}`;
+      ctx.fillText("✦ ATMOS LENORMAND ✦", canvas.width / 2, 120);
+
+      ctx.fillStyle = S.textMuted;
+      ctx.font = `18px ${S.fontMono}`;
+      ctx.fillText(`CARD №${d.number} // ${data.date}`, canvas.width / 2, 165);
+
+      const catLabel = d.category === 'light' ? '☀ LIGHT' : (d.category === 'shadow' ? '🌑 SHADOW' : '◆ NEUTRAL');
+      const catColor = LENORMAND_CATEGORY_COLORS_LOCAL[d.category] || S.accent;
+      ctx.fillStyle = catColor;
+      ctx.font = `bold 22px ${S.fontMono}`;
+      ctx.fillText(catLabel, canvas.width / 2, 215);
+
+      ctx.strokeStyle = S.accentSoft; ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(120, 245);
+      ctx.lineTo(canvas.width - 120, 245);
+      ctx.stroke();
+
+      const cardX = 240, cardY = 290;
+      const cardW = canvas.width - 480, cardH = 780;
+
+      try {
+        const img = await new Promise((resolve, reject) => {
+          const i = new Image();
+          i.crossOrigin = "anonymous";
+          i.onload = () => resolve(i);
+          i.onerror = () => reject(new Error("load-failed"));
+          i.src = d.imageUrl;
+        });
+
+        ctx.fillStyle = "rgba(0,0,0,0.35)";
+        ctx.fillRect(cardX - 8, cardY - 8, cardW + 16, cardH + 16);
+        ctx.strokeStyle = S.accent; ctx.lineWidth = 3;
+        ctx.strokeRect(cardX - 8, cardY - 8, cardW + 16, cardH + 16);
+
+        const imgRatio = img.width / img.height;
+        const boxRatio = cardW / cardH;
+        let dw, dh;
+        if (imgRatio > boxRatio) { dw = cardW; dh = cardW / imgRatio; }
+        else { dh = cardH; dw = cardH * imgRatio; }
+        const dx = cardX + (cardW - dw) / 2;
+        const dy = cardY + (cardH - dh) / 2;
+        ctx.drawImage(img, dx, dy, dw, dh);
+      } catch (e) {
+        ctx.fillStyle = "rgba(0,0,0,0.4)";
+        ctx.fillRect(cardX, cardY, cardW, cardH);
+        ctx.strokeStyle = S.accent; ctx.lineWidth = 2;
+        ctx.strokeRect(cardX, cardY, cardW, cardH);
+        ctx.fillStyle = S.accent;
+        ctx.font = `bold 200px serif`;
+        ctx.fillText("🃏", cardX + cardW / 2, cardY + cardH / 2);
+      }
+
+      const nameY = cardY + cardH + 70;
+      ctx.fillStyle = S.accentDeep;
+      ctx.font = `bold 58px ${S.fontHead}`;
+      ctx.fillText(d.name || "", canvas.width / 2, nameY);
+
+      ctx.fillStyle = S.textPrimary;
+      ctx.font = `italic 28px ${S.fontHead}`;
+      ctx.fillText(d.nameBg || "", canvas.width / 2, nameY + 50);
+
+      ctx.fillStyle = S.accent;
+      ctx.font = `bold 22px ${S.fontMono}`;
+      const kws = (d.keywords || []).join("  •  ").toUpperCase();
+      ctx.fillText(kws, canvas.width / 2, nameY + 105);
+
+      const lsY = nameY + 160;
+
+      ctx.fillStyle = S.accentBlue;
+      ctx.font = `bold 22px ${S.fontMono}`;
+      ctx.fillText("☀ LIGHT", canvas.width / 2, lsY);
+
+      ctx.fillStyle = S.textPrimary;
+      ctx.font = `22px ${S.fontHead}`;
+      const lightLines = lenormandWrapTextLocal(ctx, d.light || "", canvas.width - 200, 2);
+      lightLines.forEach((line, i) => {
+        ctx.fillText(line, canvas.width / 2, lsY + 35 + i * 28);
+      });
+
+      const shadowStartY = lsY + 35 + lightLines.length * 28 + 30;
+
+      ctx.fillStyle = "#c77d7d";
+      ctx.font = `bold 22px ${S.fontMono}`;
+      ctx.fillText("🌑 SHADOW", canvas.width / 2, shadowStartY);
+
+      ctx.fillStyle = S.textPrimary;
+      ctx.font = `22px ${S.fontHead}`;
+      const shadowLines = lenormandWrapTextLocal(ctx, d.shadow || "", canvas.width - 200, 2);
+      shadowLines.forEach((line, i) => {
+        ctx.fillText(line, canvas.width / 2, shadowStartY + 35 + i * 28);
+      });
+
+      ctx.strokeStyle = S.accentSoft; ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(120, canvas.height - 130);
+      ctx.lineTo(canvas.width - 120, canvas.height - 130);
+      ctx.stroke();
+
+      ctx.fillStyle = S.textMuted;
+      ctx.font = `18px ${S.fontMono}`;
+      ctx.fillText("ATMOS LENORMAND ENGINE // 36 CARDS", canvas.width / 2, canvas.height - 90);
+
+      ctx.fillStyle = S.accent;
+      ctx.font = `bold 22px ${S.fontHead}`;
+      ctx.fillText("atoms.free.bg", canvas.width / 2, canvas.height - 55);
+
+      return canvas.toDataURL("image/png");
+    }
+
+    // =========================================================
+    // РЕНДЕР 16: ATMOS LENORMAND — 3-CARD READING
+    // =========================================================
+    async function generateLenormandReadCanvasCard(data) {
+      const S = {
+        bgTop: "#0a1020", bgMid: "#1a2540", bgBot: "#050810",
+        accent: "#d4af37", accentSoft: "rgba(212, 175, 55, 0.35)",
+        accentDeep: "#ffd700", accentBlue: "#4a90d9",
+        textPrimary: "#e6eef8", textMuted: "rgba(230, 238, 248, 0.55)",
+        fontHead: "serif", fontMono: "monospace"
+      };
+
+      const d = data.resolved || {};
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      canvas.width = 1080; canvas.height = 1920;
+
+      const bgGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      bgGrad.addColorStop(0, S.bgTop);
+      bgGrad.addColorStop(0.5, S.bgMid);
+      bgGrad.addColorStop(1, S.bgBot);
+      ctx.fillStyle = bgGrad; ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.fillStyle = "rgba(230, 238, 248, 0.08)";
+      for (let i = 0; i < 400; i++) {
+        ctx.fillRect(Math.random() * canvas.width, Math.random() * canvas.height, 1, 1);
+      }
+
+      ctx.strokeStyle = S.accentSoft; ctx.lineWidth = 2;
+      ctx.strokeRect(40, 40, canvas.width - 80, canvas.height - 80);
+      ctx.strokeStyle = S.accent; ctx.lineWidth = 1;
+      ctx.strokeRect(55, 55, canvas.width - 110, canvas.height - 110);
+
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+
+      ctx.fillStyle = S.accent;
+      ctx.font = `bold 36px serif`;
+      ctx.fillText("✦", 95, 95);
+      ctx.fillText("✦", canvas.width - 95, 95);
+      ctx.fillText("✦", 95, canvas.height - 95);
+      ctx.fillText("✦", canvas.width - 95, canvas.height - 95);
+
+      ctx.fillStyle = S.accent;
+      ctx.font = `bold 40px ${S.fontHead}`;
+      ctx.fillText("✦ LENORMAND READING ✦", canvas.width / 2, 110);
+
+      ctx.fillStyle = S.textMuted;
+      ctx.font = `18px ${S.fontMono}`;
+      ctx.fillText(`3-CARD SPREAD // ${data.date}`, canvas.width / 2, 155);
+
+      ctx.strokeStyle = S.accentSoft; ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(120, 190);
+      ctx.lineTo(canvas.width - 120, 190);
+      ctx.stroke();
+
+      ctx.fillStyle = S.accent;
+      ctx.font = `bold 20px ${S.fontMono}`;
+      ctx.fillText("ВЪПРОС", canvas.width / 2, 230);
+
+      ctx.fillStyle = S.textPrimary;
+      ctx.font = `bold 28px ${S.fontHead}`;
+      const qLines = lenormandWrapTextLocal(ctx, `„${d.question || ""}"`, canvas.width - 200, 3);
+      qLines.forEach((line, i) => {
+        ctx.fillText(line, canvas.width / 2, 275 + i * 36);
+      });
+
+      const cards = d.cards || [];
+      const cardW = 260;
+      const cardH = 400;
+      const gap = 40;
+      const totalW = 3 * cardW + 2 * gap;
+      const startX = (canvas.width - totalW) / 2;
+      const cardY = 480;
+
+      for (let i = 0; i < cards.length && i < 3; i++) {
+        const c = cards[i];
+        const cx = startX + i * (cardW + gap);
+
+        ctx.fillStyle = "rgba(0,0,0,0.35)";
+        ctx.fillRect(cx - 4, cardY - 4, cardW + 8, cardH + 8);
+        ctx.strokeStyle = S.accent;
+        ctx.lineWidth = 2;
+        ctx.strokeRect(cx - 4, cardY - 4, cardW + 8, cardH + 8);
+
+        try {
+          const img = await new Promise((resolve, reject) => {
+            const i2 = new Image();
+            i2.crossOrigin = "anonymous";
+            i2.onload = () => resolve(i2);
+            i2.onerror = () => reject(new Error("load-failed"));
+            i2.src = c.imageUrl;
+          });
+
+          const imgRatio = img.width / img.height;
+          const boxRatio = cardW / cardH;
+          let dw, dh;
+          if (imgRatio > boxRatio) { dw = cardW; dh = cardW / imgRatio; }
+          else { dh = cardH; dw = cardH * imgRatio; }
+          const dx = cx + (cardW - dw) / 2;
+          const dy = cardY + (cardH - dh) / 2;
+          ctx.drawImage(img, dx, dy, dw, dh);
+        } catch (e) {
+          ctx.fillStyle = S.accent;
+          ctx.font = `bold 100px serif`;
+          ctx.fillText("🃏", cx + cardW / 2, cardY + cardH / 2);
+        }
+
+        ctx.fillStyle = S.accentDeep;
+        ctx.beginPath();
+        ctx.arc(cx + 20, cardY + 20, 18, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = S.bgTop;
+        ctx.font = `bold 20px ${S.fontMono}`;
+        ctx.fillText(String(i + 1), cx + 20, cardY + 21);
+
+        ctx.fillStyle = S.textPrimary;
+        ctx.font = `bold 24px ${S.fontHead}`;
+        ctx.fillText(c.name || "", cx + cardW / 2, cardY + cardH + 30);
+
+        ctx.fillStyle = S.textMuted;
+        ctx.font = `18px ${S.fontHead}`;
+        ctx.fillText(c.nameBg || "", cx + cardW / 2, cardY + cardH + 60);
+      }
+
+      const combY = cardY + cardH + 130;
+      ctx.strokeStyle = S.accentSoft; ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(120, combY);
+      ctx.lineTo(canvas.width - 120, combY);
+      ctx.stroke();
+
+      ctx.fillStyle = S.accent;
+      ctx.font = `bold 22px ${S.fontMono}`;
+      ctx.fillText("КОМБИНАЦИЯ", canvas.width / 2, combY + 40);
+
+      ctx.fillStyle = S.textPrimary;
+      ctx.font = `italic 26px ${S.fontHead}`;
+      const combLines = lenormandWrapTextLocal(ctx, d.combination || "", canvas.width - 200, 4);
+      combLines.forEach((line, i) => {
+        ctx.fillText(line, canvas.width / 2, combY + 85 + i * 36);
+      });
+
+      const sumY = combY + 85 + combLines.length * 36 + 40;
+      ctx.strokeStyle = S.accentSoft; ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(120, sumY);
+      ctx.lineTo(canvas.width - 120, sumY);
+      ctx.stroke();
+
+      ctx.fillStyle = S.accent;
+      ctx.font = `bold 22px ${S.fontMono}`;
+      ctx.fillText("ОБОБЩЕНИЕ", canvas.width / 2, sumY + 40);
+
+      ctx.fillStyle = S.textPrimary;
+      ctx.font = `24px ${S.fontHead}`;
+      const sumLines = lenormandWrapTextLocal(ctx, d.summary || "", canvas.width - 200, 6);
+      sumLines.forEach((line, i) => {
+        ctx.fillText(line, canvas.width / 2, sumY + 85 + i * 34);
+      });
+
+      ctx.strokeStyle = S.accentSoft; ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(120, canvas.height - 130);
+      ctx.lineTo(canvas.width - 120, canvas.height - 130);
+      ctx.stroke();
+
+      ctx.fillStyle = S.textMuted;
+      ctx.font = `18px ${S.fontMono}`;
+      ctx.fillText("ATMOS LENORMAND ENGINE // 3-CARD", canvas.width / 2, canvas.height - 90);
+
+      ctx.fillStyle = S.accent;
+      ctx.font = `bold 22px ${S.fontHead}`;
+      ctx.fillText("atoms.free.bg", canvas.width / 2, canvas.height - 55);
+
+      return canvas.toDataURL("image/png");
+    }
+
+    // =========================================================
+    // РЕНДЕР 17: ATMOS LENORMAND — GRAND TABLEAU
+    // =========================================================
+    async function generateLenormandGrandCanvasCard(data) {
+      const S = {
+        bgTop: "#0a1020", bgMid: "#1a2540", bgBot: "#050810",
+        accent: "#d4af37", accentSoft: "rgba(212, 175, 55, 0.35)",
+        accentDeep: "#ffd700", accentBlue: "#4a90d9",
+        textPrimary: "#e6eef8", textMuted: "rgba(230, 238, 248, 0.55)",
+        fontHead: "serif", fontMono: "monospace"
+      };
+
+      const d = data.resolved || {};
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      canvas.width = 1080; canvas.height = 1920;
+
+      const bgGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      bgGrad.addColorStop(0, S.bgTop);
+      bgGrad.addColorStop(0.5, S.bgMid);
+      bgGrad.addColorStop(1, S.bgBot);
+      ctx.fillStyle = bgGrad; ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.fillStyle = "rgba(230, 238, 248, 0.08)";
+      for (let i = 0; i < 500; i++) {
+        ctx.fillRect(Math.random() * canvas.width, Math.random() * canvas.height, 1, 1);
+      }
+
+      ctx.strokeStyle = S.accentSoft; ctx.lineWidth = 2;
+      ctx.strokeRect(40, 40, canvas.width - 80, canvas.height - 80);
+      ctx.strokeStyle = S.accent; ctx.lineWidth = 1;
+      ctx.strokeRect(55, 55, canvas.width - 110, canvas.height - 110);
+
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+
+      ctx.fillStyle = S.accent;
+      ctx.font = `bold 36px serif`;
+      ctx.fillText("✦", 95, 95);
+      ctx.fillText("✦", canvas.width - 95, 95);
+      ctx.fillText("✦", 95, canvas.height - 95);
+      ctx.fillText("✦", canvas.width - 95, canvas.height - 95);
+
+      ctx.fillStyle = S.accent;
+      ctx.font = `bold 40px ${S.fontHead}`;
+      ctx.fillText("✦ GRAND TABLEAU ✦", canvas.width / 2, 100);
+
+      ctx.fillStyle = S.textMuted;
+      ctx.font = `18px ${S.fontMono}`;
+      ctx.fillText(`36 CARDS // ${data.date}`, canvas.width / 2, 145);
+
+      ctx.strokeStyle = S.accentSoft; ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(120, 175);
+      ctx.lineTo(canvas.width - 120, 175);
+      ctx.stroke();
+
+      ctx.fillStyle = S.accent;
+      ctx.font = `bold 18px ${S.fontMono}`;
+      ctx.fillText("ВЪПРОС", canvas.width / 2, 210);
+
+      ctx.fillStyle = S.textPrimary;
+      ctx.font = `bold 24px ${S.fontHead}`;
+      const qLines = lenormandWrapTextLocal(ctx, `„${d.question || ""}"`, canvas.width - 200, 2);
+      qLines.forEach((line, i) => {
+        ctx.fillText(line, canvas.width / 2, 245 + i * 32);
+      });
+
+      const gridX = 60;
+      const gridY = 320;
+      const gridW = canvas.width - 120;
+      const gridH = 900;
+
+      const cardW = (gridW - 8 * 6) / 9;
+      const cardH = (gridH - 3 * 6) / 4;
+      const gap = 6;
+
+      const grid = d.grid || [];
+      const sigIndex = d.sigIndex;
+      const box9Indexes = d.box9Indexes || [];
+      const knightIndexes = d.knightIndexes || [];
+
+      const images = await Promise.all(grid.map(c => {
+        return new Promise((resolve) => {
+          const i = new Image();
+          i.crossOrigin = "anonymous";
+          i.onload = () => resolve(i);
+          i.onerror = () => resolve(null);
+          i.src = c.imageUrl;
+        });
+      }));
+
+      for (let i = 0; i < 36; i++) {
+        const r = Math.floor(i / 9);
+        const c = i % 9;
+        const cx = gridX + c * (cardW + gap);
+        const cy = gridY + r * (cardH + gap);
+        const card = grid[i];
+        if (!card) continue;
+
+        const isSig = (i === sigIndex);
+        const isBox = box9Indexes.includes(i);
+        const isKnight = knightIndexes.includes(i);
+
+        if (isBox) {
+          ctx.fillStyle = "rgba(212, 175, 55, 0.15)";
+          ctx.fillRect(cx - 2, cy - 2, cardW + 4, cardH + 4);
+        }
+
+        if (isSig) {
+          ctx.strokeStyle = S.accentDeep;
+          ctx.lineWidth = 4;
+        } else if (isKnight) {
+          ctx.strokeStyle = S.accentBlue;
+          ctx.lineWidth = 3;
+        } else if (isBox) {
+          ctx.strokeStyle = S.accent;
+          ctx.lineWidth = 2;
+        } else {
+          ctx.strokeStyle = S.accentSoft;
+          ctx.lineWidth = 1;
+        }
+        ctx.strokeRect(cx - 1, cy - 1, cardW + 2, cardH + 2);
+
+        const img = images[i];
+        if (img) {
+          const imgRatio = img.width / img.height;
+          const boxRatio = cardW / cardH;
+          let dw, dh;
+          if (imgRatio > boxRatio) { dw = cardW; dh = cardW / imgRatio; }
+          else { dh = cardH; dw = cardH * imgRatio; }
+          const dx = cx + (cardW - dw) / 2;
+          const dy = cy + (cardH - dh) / 2;
+          ctx.drawImage(img, dx, dy, dw, dh);
+        } else {
+          ctx.fillStyle = "rgba(0,0,0,0.5)";
+          ctx.fillRect(cx, cy, cardW, cardH);
+          ctx.fillStyle = S.accent;
+          ctx.font = `bold 24px ${S.fontMono}`;
+          ctx.fillText(String(card.number), cx + cardW / 2, cy + cardH / 2);
+        }
+
+        ctx.fillStyle = S.accentDeep;
+        ctx.beginPath();
+        ctx.arc(cx + 8, cy + 8, 10, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = S.bgTop;
+        ctx.font = `bold 11px ${S.fontMono}`;
+        ctx.fillText(String(card.number), cx + 8, cy + 9);
+
+        if (isSig) {
+          ctx.fillStyle = S.accentDeep;
+          ctx.font = `bold 12px ${S.fontMono}`;
+          ctx.fillText("YOU", cx + cardW / 2, cy + cardH - 8);
+        }
+      }
+
+      const legendY = gridY + gridH + 40;
+
+      ctx.fillStyle = S.accentDeep;
+      ctx.font = `bold 18px ${S.fontMono}`;
+      ctx.fillText("● ЗЛАТНА РАМКА = ТИ (Significator)", canvas.width / 2, legendY);
+      ctx.fillStyle = S.accent;
+      ctx.fillText("● ЗЛАТЕН ФОН = Кутията на 9-те", canvas.width / 2, legendY + 28);
+      ctx.fillStyle = S.accentBlue;
+      ctx.fillText("● СИНЯ РАМКА = Ход на коня", canvas.width / 2, legendY + 56);
+
+      const resY = legendY + 100;
+      ctx.strokeStyle = S.accentSoft; ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(120, resY);
+      ctx.lineTo(canvas.width - 120, resY);
+      ctx.stroke();
+
+      ctx.fillStyle = S.accent;
+      ctx.font = `bold 20px ${S.fontMono}`;
+      ctx.fillText("РЕЗЮМЕ", canvas.width / 2, resY + 35);
+
+      ctx.fillStyle = S.textPrimary;
+      ctx.font = `22px ${S.fontHead}`;
+
+      const readingLines = (d.readingText || "").split("\n").filter(l => l.trim().length > 0);
+      const summaryLines = readingLines.slice(0, 8);
+      let cursorY = resY + 75;
+      summaryLines.forEach((line) => {
+        const wrapped = lenormandWrapTextLocal(ctx, line.trim(), canvas.width - 200, 2);
+        wrapped.forEach(l => {
+          ctx.fillText(l, canvas.width / 2, cursorY);
+          cursorY += 30;
+        });
+      });
+
+      ctx.strokeStyle = S.accentSoft; ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(120, canvas.height - 130);
+      ctx.lineTo(canvas.width - 120, canvas.height - 130);
+      ctx.stroke();
+
+      ctx.fillStyle = S.textMuted;
+      ctx.font = `18px ${S.fontMono}`;
+      ctx.fillText("ATMOS LENORMAND ENGINE // GRAND TABLEAU", canvas.width / 2, canvas.height - 90);
+
+      ctx.fillStyle = S.accent;
+      ctx.font = `bold 22px ${S.fontHead}`;
+      ctx.fillText("atoms.free.bg", canvas.width / 2, canvas.height - 55);
+
+      return canvas.toDataURL("image/png");
+    }
+
+        // =========================================================
+    // РЕНДЕР 18: ATMOS PSYCHE
+    // =========================================================
+    function psycheWrapTextLocal(ctx, text, maxWidth, maxLines) {
+      const words = (text || "").split(" ");
+      const lines = [];
+      let cur = "";
+      for (let i = 0; i < words.length; i++) {
+        const test = cur + words[i] + " ";
+        if (ctx.measureText(test).width > maxWidth && i > 0) {
+          lines.push(cur.trim());
+          cur = words[i] + " ";
+          if (maxLines && lines.length >= maxLines) {
+            if (cur.trim()) lines[lines.length - 1] += "...";
+            return lines;
+          }
+        } else {
+          cur = test;
+        }
+      }
+      if (cur.trim()) lines.push(cur.trim());
+      return lines;
+    }
+
+    function psycheLoadImageLocal(url) {
+      return new Promise((resolve, reject) => {
+        if (!url) return reject(new Error("no-url"));
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = () => resolve(img);
+        img.onerror = () => reject(new Error("load-failed"));
+        img.src = url;
+      });
+    }
+
+    // =========================================================
+// РЕНДЕР 18: ATMOS PSYCHE (v2.0)
+// =========================================================
+function psycheWrapTextLocal(ctx, text, maxWidth, maxLines) {
+  const words = (text || "").split(" ");
+  const lines = [];
+  let cur = "";
+  for (let i = 0; i < words.length; i++) {
+    const test = cur + words[i] + " ";
+    if (ctx.measureText(test).width > maxWidth && i > 0) {
+      lines.push(cur.trim());
+      cur = words[i] + " ";
+      if (maxLines && lines.length >= maxLines) {
+        if (cur.trim()) lines[lines.length - 1] += "...";
+        return lines;
+      }
+    } else {
+      cur = test;
+    }
+  }
+  if (cur.trim()) lines.push(cur.trim());
+  return lines;
+}
+
+function psycheLoadImageLocal(url) {
+  return new Promise((resolve, reject) => {
+    if (!url) return reject(new Error("no-url"));
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error("load-failed"));
+    img.src = url;
+  });
+}
+
+// =========================================================
+// РЕНДЕР 18: ATMOS PSYCHE (v3.0)
+// =========================================================
+function psycheWrapTextLocal(ctx, text, maxWidth, maxLines) {
+  const words = (text || "").split(" ");
+  const lines = [];
+  let cur = "";
+  for (let i = 0; i < words.length; i++) {
+    const test = cur + words[i] + " ";
+    if (ctx.measureText(test).width > maxWidth && i > 0) {
+      lines.push(cur.trim());
+      cur = words[i] + " ";
+      if (maxLines && lines.length >= maxLines) {
+        if (cur.trim()) lines[lines.length - 1] += "...";
+        return lines;
+      }
+    } else {
+      cur = test;
+    }
+  }
+  if (cur.trim()) lines.push(cur.trim());
+  return lines;
+}
+
+function psycheLoadImageLocal(url) {
+  return new Promise((resolve, reject) => {
+    if (!url) return reject(new Error("no-url"));
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error("load-failed"));
+    img.src = url;
+  });
+}
+
+async function generatePsycheCanvasCard(data) {
+  const S = {
+    bgTop: "#0a1a1a", bgMid: "#0d2020", bgBot: "#050d0d",
+    accent: "#4ecdc4", accentSoft: "rgba(78, 205, 196, 0.35)",
+    accentDeep: "#d4af37", accentRed: "#8b2020",
+    textPrimary: "#e6f5f4", textMuted: "rgba(230, 245, 244, 0.55)",
+    fontHead: "serif", fontMono: "monospace"
+  };
+
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
+  canvas.width = 1080;
+  canvas.height = 1920;
+
+  // Фон
+  const bgGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+  bgGrad.addColorStop(0, S.bgTop);
+  bgGrad.addColorStop(0.5, S.bgMid);
+  bgGrad.addColorStop(1, S.bgBot);
+  ctx.fillStyle = bgGrad;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  ctx.fillStyle = "rgba(230, 245, 244, 0.06)";
+  for (let i = 0; i < 500; i++) {
+    ctx.fillRect(Math.random() * canvas.width, Math.random() * canvas.height, 1, 1);
+  }
+
+  ctx.strokeStyle = S.accentSoft; ctx.lineWidth = 2;
+  ctx.strokeRect(40, 40, canvas.width - 80, canvas.height - 80);
+  ctx.strokeStyle = S.accent; ctx.lineWidth = 1;
+  ctx.strokeRect(55, 55, canvas.width - 110, canvas.height - 110);
+
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+
+  ctx.fillStyle = S.accent;
+  ctx.font = `bold 36px serif`;
+  ctx.fillText("✦", 95, 95);
+  ctx.fillText("✦", canvas.width - 95, 95);
+  ctx.fillText("✦", 95, canvas.height - 95);
+  ctx.fillText("✦", canvas.width - 95, canvas.height - 95);
+
+  ctx.fillStyle = S.accent;
+  ctx.font = `bold 44px ${S.fontHead}`;
+  ctx.fillText("✦ ATMOS PSYCHE ✦", canvas.width / 2, 120);
+
+  ctx.fillStyle = S.textMuted;
+  ctx.font = `18px ${S.fontMono}`;
+  const d = data.resolved || {};
+  ctx.fillText(`DREAM ANALYSIS // ${d.date || ''} // ID: ${d.id || ''}`, canvas.width / 2, 165);
+
+  ctx.strokeStyle = S.accentSoft; ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(120, 195);
+  ctx.lineTo(canvas.width - 120, 195);
+  ctx.stroke();
+
+  // ИЗОБРАЖЕНИЕ — MULTILAYERED
+  const imgY = 230;
+  const imgMaxW = canvas.width - 200;
+  const imgMaxH = 900;
+  const imgLeftX = (canvas.width - imgMaxW) / 2;
+
+  const sel = d.layerSelection || { type: 'none', layers: [] };
+  let actualImgH = 0;
+  let actualImgW = imgMaxW;
+  let actualImgX = imgLeftX;
+
+  function loadImg(url) {
+    return new Promise((resolve) => {
+      if (!url) return resolve(null);
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () => resolve(img);
+      img.onerror = () => resolve(null);
+      img.src = url;
+    });
+  }
+
+  if (sel.layers && sel.layers.length > 0) {
+    const images = await Promise.all(sel.layers.map(l => loadImg(l.imageUrl)));
+
+    for (let i = 0; i < sel.layers.length; i++) {
+      const layer = sel.layers[i];
+      const img = images[i];
+      if (!img) continue;
+
+      const ratio = img.width / img.height;
+      let dw = imgMaxW;
+      let dh = imgMaxW / ratio;
+      if (dh > imgMaxH) {
+        dh = imgMaxH;
+        dw = imgMaxH * ratio;
+      }
+      const dx = (canvas.width - dw) / 2;
+
+      ctx.globalCompositeOperation = layer.blend || 'source-over';
+      ctx.globalAlpha = layer.opacity !== undefined ? layer.opacity : 1.0;
+      ctx.drawImage(img, dx, imgY, dw, dh);
+
+      if (i === 0) {
+        actualImgH = dh;
+        actualImgW = dw;
+        actualImgX = dx;
+      }
+    }
+
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.globalAlpha = 1.0;
+
+    if (sel.tint && actualImgH > 0) {
+      ctx.fillStyle = sel.tint;
+      ctx.fillRect(actualImgX, imgY, actualImgW, actualImgH);
+    }
+  }
+
+  if (actualImgH === 0) {
+    actualImgH = 400;
+    ctx.fillStyle = "rgba(0,0,0,0.4)";
+    ctx.fillRect(actualImgX, imgY, actualImgW, actualImgH);
+    ctx.strokeStyle = S.accent;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(actualImgX, imgY, actualImgW, actualImgH);
+    ctx.fillStyle = S.accent;
+    ctx.font = `bold 24px ${S.fontMono}`;
+    ctx.fillText("[ изображението не е налично ]", canvas.width / 2, imgY + actualImgH / 2);
+  }
+
+  // Сексуален овърлей
+  if (sel.type === 'overlay' && sel.sexualImageUrl) {
+    const sexImg = await loadImg(sel.sexualImageUrl);
+    if (sexImg) {
+      const ratio = sexImg.width / sexImg.height;
+      let dw = actualImgW;
+      let dh = actualImgW / ratio;
+      if (dh > actualImgH) {
+        dh = actualImgH;
+        dw = actualImgH * ratio;
+      }
+      const dx = actualImgX + (actualImgW - dw) / 2;
+      const dy = imgY + (actualImgH - dh) / 2;
+
+      const tempCanvas = document.createElement("canvas");
+      tempCanvas.width = dw;
+      tempCanvas.height = dh;
+      const tempCtx = tempCanvas.getContext("2d");
+      tempCtx.drawImage(sexImg, 0, 0, dw, dh);
+
+      const cx = dw / 2;
+      const cy = dh / 2;
+      const radius = Math.max(dw, dh) * 0.6;
+      const maskGrad = tempCtx.createRadialGradient(cx, cy, radius * 0.2, cx, cy, radius);
+      maskGrad.addColorStop(0, "rgba(255,255,255,0.9)");
+      maskGrad.addColorStop(0.5, "rgba(255,255,255,0.4)");
+      maskGrad.addColorStop(1, "rgba(255,255,255,0)");
+
+      tempCtx.globalCompositeOperation = 'destination-in';
+      tempCtx.fillStyle = maskGrad;
+      tempCtx.fillRect(0, 0, dw, dh);
+
+      ctx.globalAlpha = 0.65;
+      ctx.drawImage(tempCanvas, dx, dy);
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  if (actualImgH > 0) {
+    ctx.strokeStyle = S.accent;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(actualImgX - 4, imgY - 4, actualImgW + 8, actualImgH + 8);
+  }
+
+  // МОДЕЛИ
+  let yCursor = imgY + actualImgH + 60;
+  const maxModels = 6;
+  const basic = (d.basic || []).slice(0, maxModels);
+
+  ctx.fillStyle = S.accent;
+  ctx.font = `bold 22px ${S.fontMono}`;
+  ctx.fillText("АКТИВИРАНИ МОДЕЛИ", canvas.width / 2, yCursor);
+  yCursor += 40;
+
+  const barMaxW = 500;
+  const barX = (canvas.width - barMaxW) / 2;
+  const barH = 14;
+  const lineH = 42;
+
+  for (const m of basic) {
+    ctx.fillStyle = S.textPrimary;
+    ctx.font = `bold 20px ${S.fontHead}`;
+    ctx.textAlign = "left";
+    ctx.fillText(m.name, barX, yCursor);
+
+    ctx.textAlign = "right";
+    ctx.fillStyle = S.textMuted;
+    ctx.font = `16px ${S.fontMono}`;
+    ctx.fillText(`${m.weight}/10`, barX + barMaxW, yCursor);
+
+    ctx.textAlign = "left";
+    const barFillW = Math.min(barMaxW, Math.max(0, (m.weight / 10) * barMaxW));
+    ctx.fillStyle = "rgba(78, 205, 196, 0.15)";
+    ctx.fillRect(barX, yCursor + 8, barMaxW, barH);
+
+    let barColor = S.accent;
+    if (m.category === 'shadow') barColor = S.accentRed;
+    else if (m.category === 'light') barColor = S.accentDeep;
+
+    ctx.fillStyle = barColor;
+    ctx.fillRect(barX, yCursor + 8, barFillW, barH);
+
+    yCursor += lineH;
+  }
+  ctx.textAlign = "center";
+
+  yCursor += 20;
+  ctx.strokeStyle = S.accentSoft; ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(120, yCursor);
+  ctx.lineTo(canvas.width - 120, yCursor);
+  ctx.stroke();
+  yCursor += 45;
+
+  ctx.fillStyle = S.accent;
+  ctx.font = `bold 22px ${S.fontMono}`;
+  ctx.fillText("ОБОБЩЕНИЕ", canvas.width / 2, yCursor);
+  yCursor += 40;
+
+  ctx.fillStyle = S.textPrimary;
+  ctx.font = `22px ${S.fontHead}`;
+
+  let summaryText = "";
+if (d.combined && d.combined.length > 0) {
+  summaryText = d.combined[0].description || "";
+} else if (d.basic && d.basic.length > 0) {
+  summaryText = d.basic[0].description || "";
+}
+
+  // wrap
+  function wrapText(text, maxWidth, maxLines) {
+    const words = (text || "").split(" ");
+    const lines = [];
+    let cur = "";
+    for (let i = 0; i < words.length; i++) {
+      const test = cur + words[i] + " ";
+      if (ctx.measureText(test).width > maxWidth && i > 0) {
+        lines.push(cur.trim());
+        cur = words[i] + " ";
+        if (maxLines && lines.length >= maxLines) {
+          if (cur.trim()) lines[lines.length - 1] += "...";
+          return lines;
+        }
+      } else {
+        cur = test;
+      }
+    }
+    if (cur.trim()) lines.push(cur.trim());
+    return lines;
+  }
+
+  const sumLines = wrapText(summaryText, canvas.width - 220, 5);
+  sumLines.forEach((line, i) => {
+    ctx.fillText(line, canvas.width / 2, yCursor + i * 32);
+  });
+  yCursor += sumLines.length * 32 + 30;
+
+  if (yCursor < canvas.height - 250) {
+    ctx.strokeStyle = S.accentSoft; ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(120, yCursor);
+    ctx.lineTo(canvas.width - 120, yCursor);
+    ctx.stroke();
+    yCursor += 45;
+
+    ctx.fillStyle = S.accentDeep;
+    ctx.font = `bold 22px ${S.fontMono}`;
+    ctx.fillText("СЪВЕТ", canvas.width / 2, yCursor);
+    yCursor += 40;
+
+    ctx.fillStyle = S.textPrimary;
+    ctx.font = `italic 22px ${S.fontHead}`;
+
+   let adviceText = d.adviceText || "";
+if (!adviceText && d.combined && d.combined.length > 0) {
+  adviceText = d.combined[0].advice || "";
+}
+if (!adviceText && d.basic && d.basic.length > 0) {
+  adviceText = d.basic[0].advice || "";
+}
+
+    const advLines = wrapText(adviceText, canvas.width - 220, 4);
+    advLines.forEach((line, i) => {
+      ctx.fillText(line, canvas.width / 2, yCursor + i * 32);
+    });
+  }
+
+  ctx.strokeStyle = S.accentSoft; ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(120, canvas.height - 130);
+  ctx.lineTo(canvas.width - 120, canvas.height - 130);
+  ctx.stroke();
+
+  ctx.fillStyle = S.textMuted;
+  ctx.font = `18px ${S.fontMono}`;
+  ctx.fillText("ATMOS PSYCHE ENGINE // FREUD + JUNG + ADLER", canvas.width / 2, canvas.height - 90);
+
+  ctx.fillStyle = S.accent;
+  ctx.font = `bold 22px ${S.fontHead}`;
+  ctx.fillText("atoms.free.bg", canvas.width / 2, canvas.height - 55);
+
+  return canvas.toDataURL("image/png");
+}
+
+window.addEventListener('DOMContentLoaded', startProcess);
+  </script>
+</head>
+<body>
+  <div class="loader">▲ ATMOS REMOTE DOWNLOAD CORE</div>
+  <div class="status" id="status">[SYSTEM] Инициализиране...</div>
+  
+  <a id="fallbackBtn" class="download-btn">[СВАЛИ ИЗОБРАЖЕНИЕТО РЪЧНО]</a>
+</body>
+</html>

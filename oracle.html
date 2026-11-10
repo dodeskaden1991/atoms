@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🔮 Atmos Oracle</title>
+  <link rel="icon" type="image/png" href="ico.png">
+  <link rel="stylesheet" href="css/oracle.css">
+</head>
+<body class="dark">
+  <audio id="audioPlayer"></audio>
+  <audio id="notifySound" src="notify.mp3" preload="auto"></audio>
+
+  <header id="oracleHeader">
+    <h1>🔮 Atmos Oracle</h1>
+    <a href="index.html" id="homeBtn">🏠 Начало</a>
+  </header>
+
+  <div id="oracleLayout">
+    <aside id="oracleSidebar">
+      <section class="profileSection">
+        <h3>👤 Твои данни</h3>
+        <input id="meName" placeholder="Име" autocomplete="off">
+        <input id="meDate" placeholder="ДД.ММ.ГГГГ" autocomplete="off">
+      </section>
+      <section class="profileSection">
+        <h3>👥 Втори човек <small>(за нумерология)</small></h3>
+        <input id="youName" placeholder="Име" autocomplete="off">
+        <input id="youDate" placeholder="ДД.ММ.ГГГГ" autocomplete="off">
+      </section>
+      <section class="oracleListSection">
+        <h3>🔮 Оракули</h3>
+        <div id="oracleTabs"></div>
+      </section>
+    </aside>
+
+    <main id="oracleMain">
+      <div id="oracleFormWrap">
+        <div id="oracleForm"></div>
+        <button id="oracleGenerateBtn">✨ Изпълни</button>
+      </div>
+      <div id="oracleResult" style="display:none;">
+        <div id="oracleResultText"></div>
+        <img id="oracleResultImage" style="display:none;">
+        <div id="oracleResultActions">
+          <a id="oracleDownloadBtn" href="https://tinyurl.com/bmnrux6t" target="_blank" rel="noopener noreferrer" style="display:none;">📥 Свали картинка</a>
+          <button id="oraclePublishBtn" style="display:none;">📢 Публикувай в Atmos</button>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  <script src="js/chat.js"></script>
+  <script src="js/main.js"></script>
+  <script src="js/fortunes_data.js"></script>
+  <script src="js/tarot_data.js"></script>
+  <script src="js/tarot.js"></script>
+  <script src="js/runes_data.js"></script>
+  <script src="js/runes.js"></script>
+  <script src="js/ogham_data.js"></script>
+  <script src="js/ogham.js"></script>
+  <script src="js/lenormand_data.js"></script>
+  <script src="js/lenormand.js"></script>
+  <script src="js/numerology_data.js"></script>
+  <script src="js/numerology.js"></script>
+  <script src="js/chakras_data.js"></script>
+  <script src="js/chakras.js"></script>
+  <script src="js/mantras_data.js"></script>
+  <script src="js/mantras.js"></script>
+  <script src="js/goetia_data.js"></script>
+  <script src="js/sigils.js"></script>
+  <script src="js/psychology_data.js"></script>
+  <script src="js/psychology.js"></script>
+  <script src="js/easteregg.js"></script>
+  <script src="js/oracle.js"></script>
+
+  <script>
+  (function() {
+    function openLink(url) {
+      if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) {
+        try {
+          if (window.Capacitor.nativeCallback) {
+            window.Capacitor.nativeCallback('Browser', 'open', { url: url });
+          } else { window.open(url, '_system'); }
+        } catch(e) { window.open(url, '_blank'); }
+      } else { window.open(url, '_blank'); }
+    }
+    
+    document.addEventListener('click', function(e) {
+      var target = e.target.closest('a');
+      if (target && target.href) {
+        var href = target.href;
+        if (href.indexOf('atoms.free.bg') === -1 && href.indexOf('localhost') === -1 && href.indexOf('atmos') === -1) {
+          e.preventDefault();
+          openLink(href);
+        }
+      }
+    });
+  })();
+  </script>
+
+</body>
+</html>

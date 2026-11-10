@@ -304,6 +304,50 @@ if (window.speechSynthesis) {
 }
 
 /* ==========================================================
+   WEBVIEW LAYER REPAIR — форсира пре-композиране
+   ========================================================== */
+function forceAtmosRepaint() {
+  void document.body.offsetHeight;
+
+  const targets = [
+    document.getElementById('messages'),
+    document.getElementById('chatArea'),
+    document.getElementById('appLayout'),
+    document.getElementById('sidebar')     // ← ДОБАВЕНО
+  ];
+
+  targets.forEach(function(el) {
+    if (!el) return;
+    const prevTransform = el.style.transform;
+    const prevWillChange = el.style.willChange;
+    el.style.willChange = 'transform';
+    el.style.transform = 'translateZ(0)';
+    void el.offsetHeight;
+    el.style.transform = prevTransform;
+    el.style.willChange = prevWillChange;
+  });
+
+  const messages = document.getElementById('messages');
+  if (messages) {
+    const st = messages.scrollTop;
+    messages.scrollTop = st + 1;
+    messages.scrollTop = st;
+  }
+
+  // ✅ НОВО: форсирай пълно пре-композиране на целия viewport
+  const root = document.documentElement;
+  const prevRootTransform = root.style.transform;
+  root.style.transform = 'translateZ(0)';
+  void root.offsetHeight;
+  root.style.transform = prevRootTransform;
+
+  requestAnimationFrame(function() {
+    void document.body.offsetHeight;
+  });
+}
+
+
+/* ==========================================================
    MATRIX RAIN
 ========================================================= */
 
@@ -352,6 +396,7 @@ function triggerMatrixRain() {
   setTimeout(() => {
     active = false;
     canvas.remove();
+    forceAtmosRepaint();
   }, 5000);
 }
 
@@ -382,6 +427,7 @@ function triggerGlitchOverlay() {
 
   setTimeout(() => {
     if (overlay && overlay.parentNode) overlay.remove();
+    forceAtmosRepaint();
   }, 700);
 }
 
@@ -422,6 +468,7 @@ function triggerKickPopup(target) {
 
   setTimeout(() => {
     if (popup && popup.parentNode) popup.remove();
+    forceAtmosRepaint();
   }, 2600);
 }
 
@@ -460,6 +507,7 @@ function triggerHackPopup(target) {
 
   setTimeout(() => {
     if (popup && popup.parentNode) popup.remove();
+    forceAtmosRepaint();
   }, 2600);
 }
 
@@ -834,3 +882,96 @@ window.openAtmosLink = function(url, download = false) {
     }
   }
 };
+
+/* ==========================================================
+   KEYBOARD RESIZE HANDLER — "popup simulation" fix
+   ========================================================== */
+(function() {
+  let repaintTimer = null;
+  let lastVisualHeight = window.visualViewport 
+    ? window.visualViewport.height 
+    : window.innerHeight;
+
+  function simulatePopupRefresh() {
+    // Ако истински popup е отворен — не правим нищо (той вече пре-композира)
+    const term = document.getElementById('terminalPopup');
+    const games = document.getElementById('gamesPopup');
+    if ((term && term.style.display === 'flex') || 
+        (games && games.style.display === 'flex')) {
+      return;
+    }
+
+    // Създаваме ghost ПОП ЪП — със СЪЩАТА структура като истинските
+    const ghost = document.createElement('div');
+    ghost.id = 'atmosPopupGhost';
+    ghost.style.cssText = [
+      'position: fixed',
+      'top: 0', 'left: 0',
+      'width: 100%', 'height: 100%',
+      'z-index: 999999',
+      'display: flex',
+      'align-items: center',
+      'justify-content: center',
+      'background: rgba(0,0,0,0.001)',
+      'backdrop-filter: blur(0.5px)',
+      '-webkit-backdrop-filter: blur(0.5px)',
+      'pointer-events: none'
+    ].join(';');
+
+    // ВАЖНО: реално съдържание вътре. Празен ghost → WebView оптимизира.
+    const inner = document.createElement('div');
+    inner.style.cssText = [
+      'background: rgba(0,0,0,0.001)',
+      'border: 1px solid rgba(255,255,255,0.001)',
+      'width: 10px',
+      'height: 10px',
+      'padding: 10px'
+    ].join(';');
+    inner.textContent = '·';   // реален текстов възел — прави слоя "истински"
+    ghost.appendChild(inner);
+
+    document.body.appendChild(ghost);
+    void ghost.offsetHeight;   // force paint на ghost слоя
+
+    // Премахваме след 2 frame-а
+    requestAnimationFrame(function() {
+      requestAnimationFrame(function() {
+        const g = document.getElementById('atmosPopupGhost');
+        if (g && g.parentNode) g.parentNode.removeChild(g);
+      });
+    });
+  }
+
+  function scheduleFix(delay) {
+    if (repaintTimer) clearTimeout(repaintTimer);
+    repaintTimer = setTimeout(simulatePopupRefresh, delay || 300);
+  }
+  // Експорт за външно извикване
+window.atmosScheduleFix = scheduleFix;
+  // Тригер 1: viewport-ът порасна → клавиатурата се затваря
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', function() {
+      const h = window.visualViewport.height;
+      if (h > lastVisualHeight + 80) {
+        scheduleFix(250);
+      }
+      lastVisualHeight = h;
+    });
+  } else {
+    window.addEventListener('resize', function() {
+      const h = window.innerHeight;
+      if (h > lastVisualHeight + 80) {
+        scheduleFix(250);
+      }
+      lastVisualHeight = h;
+    });
+  }
+
+  // Тригер 2: focusout (по-ранен, по-надежден)
+  document.addEventListener('focusout', function(e) {
+    const t = e.target;
+    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) {
+      scheduleFix(400);
+    }
+  });
+})();
